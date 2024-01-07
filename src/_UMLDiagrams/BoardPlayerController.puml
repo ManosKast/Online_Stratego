@@ -1,0 +1,219 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+package Model{
+package Player_and_Board{
++interface PlayerInterface {
+
+    + moveCharacter(int initialLine, int nextLine, int initialRow, int nextRow, Player enemyPlayer) : GameCharacters
+
+    + getID() : int
+
+    + getSuccessfulAttackRatio() : int
+
+    + getReferenceToMonsters() : int[]
+
+    + getInitialReferenceToMonsters() : int[]
+
+    + getRevivals() : int
+
+    + getValidRevivalPositions() : List<Integer>
+
+    + matchContinues() : boolean
+
+    + isMovingMonster(int line, int row) : boolean
+
+    + canRevive(GameCharacters monster, Player defender) : boolean
+
+    + reviveMonster(GameCharacters monsterReviving, int newLine, int newRow, Player defender, int monster) : boolean
+
+    + getCapturedMonsters() : List<GameCharacters>
+
+    + isValidPositionForRevival(int line, int row) : boolean
+
+    + canMove(int line, int row, int nextLine, int nextRow) : boolean
+
+    + getPlayersAliveMonsters() : List<GameCharacters>
+
+    + isThisPlayersMonster(GameCharacters monster) : boolean
+
+    + getMoveablePath(int line, int row) : List<Integer>
+
+    + restartGame(Player otherPlayer) : void
+
+}
+
+
++class Player implements PlayerInterface{
+   - referenceToMonsters : int[][]
+   - static gameBoard : Board
+   - ID : int
+   - aliveMonsters : List<GameCharacters>
+   - capturedMonsters : List<GameCharacters>
+   - GameCharacters[] monstersThatCanRevive
+   - playerCount : static int
+
+   - initialiseArray(int mode) : void
+
+   - monsterCanRevive(GameCharacters monster) : boolean
+
+   - addToMonsterReferences(GameCharacters deadMonster) : void
+
+   - scoutMoveablePath(List<Integer> path, int line, int row) : void
+
+   - updateMonsterReferences(GameCharacters deadMonster) : void
+
+   - getRevivalIndex(int monster) : int
+
+   - static class sortMonsters implements Comparator<GameCharacters>
+
+   ~ lostMonster(GameCharacters deadMonster, Player captor) : void
+
+   + moveCharacter(int initialLine, int nextLine, int initialRow, int nextRow, Player enemyPlayer)
+
+   + getID() : int
+
+   + getSuccessfulAttackRatio() : int
+
+   + getReferenceToMonsters() : int[]
+
+   + getInitialReferenceToMonsters() : int[]
+
+   + getRevivals() : int
+
+   + getValidRevivalPositions() : List<Integer>
+
+   + matchContinues() : boolean
+
+   + isMovingMonster(int line, int row) : boolean
+
+   + canRevive(GameCharacters monster, Player defender) : boolean
+
+   + monsterCanRevive(int monster) : boolean
+
+   + isValidPositionForRevival(int line, int row) : boolean
+
+   + canMove(int line, int row, int nextLine, int nextRow) : boolean
+
+   + reviveMonster(GameCharacters monsterReviving,int newLine,int newRow,Player defender,int monster) : boolean
+
+   + getCapturedMonsters() : List<GameCharacters>
+
+   + getPlayersAliveMonsters() : List<GameCharacters>
+
+   + isThisPlayersMonster(GameCharacters monster) : boolean
+
+   + getMoveablePath(int line, int row) : List<Integer>
+
+   + testMove() : List<GameCharacters>
+
+   + testAttack(GameCharacters attackingMonster, Player defender, GameCharacters defendingMonster) : void
+
+   + restartGame(Player otherPlayer) : void
+
+}
+
+~class Board{
+
+    - static piecesOnBoard : GameCharacters[][]
+    - static firstPlayersTotalAttacks : int
+    - static firstPlayersSuccessfulAttacks : int
+    - static secondPlayersTotalAttacks : int
+    - static secondPlayersSuccessfulAttacks : int
+    - final gameMode : int
+
+
+    - addMonsterOnBoard(int line, int row, int monster, int player) : void
+
+    - addForbiddenZones() : void
+
+    - isEnemy(int line, int row, int playersID) : boolean
+
+    - canScoutMove(int currentLine, int nextLine, int currentRow, int nextRow, int playersID) : boolean
+
+    - attack(int ID) : void
+
+    - successfulAttack(int ID) : void
+
+    - isOutOfBounds(int line, int row) : boolean
+
+    - emptyBoard() : void
+
+    - rearrangeBoard(List<GameCharacters> first, List<GameCharacters> second) : void
+
+    ~ randomBoardSetup() : void
+
+    ~ getPlayersAliveMonsters(List<GameCharacters> monstersList, int ID) : void
+
+    ~ canMove(int currentLine, int nextLine, int currentRow, int nextRow, int playersID) : boolean
+
+    ~ moveMonster(int initialLine, int nextLine, int initialRow, int nextRow, Player attacker, Player defender) : GameCharacters
+
+    ~ getMonster(int line, int row) : GameCharacters
+
+    ~ canMoveAtLeastAMonster(List<GameCharacters> monsters) : boolean
+
+    ~ hasSelectedMoveableMonster(int line, int row, int playersID) : boolean
+
+    ~ isValidPositionForRevival(int line, int row) : boolean
+
+    ~ getTotalAttacks(int ID) : int
+
+    ~ getAttackersSuccessfulAttacks(int ID) : int
+
+    ~ resetBoard(List<GameCharacters> first, List<GameCharacters> second) : void
+
+    ~ testMove() : List<GameCharacters>
+
+    ~ testAttack(Player attacker, GameCharacters attackingMonster, Player defender, GameCharacters defendingMonster) : void
+
+}
+}
+
+}
+
+package Controller{
+
+    -class Controller {
+        - positionBuffer : final int[]
+        - view : final View
+        - gameMode : int
+        - attacker : Player
+        - defender : Player
+        - revive : boolean
+        - reviveMonster : int
+        - winner : GameCharacters
+
+        - class ButtonsPressed{}
+
+        - class UIPressed{}
+
+        - class revivePanelPressed{}
+
+        - initialiseGame() : void
+
+        - gameContinues() : boolean
+
+        - moveMonster(int currentLine, int currentRow, int nextLine, int nextRow) : void
+
+        - restartPosition() : void
+
+        - isValidMonster(int line, int row) : boolean
+
+        - isValidMovingPosition(int[] position, int nextLine, int nextRow) : boolean
+
+        - monsterHasBeenSelected(int line, int row) : boolean
+
+        - nextRound() : void
+
+        - resumeGame() : void
+
+        - restartGame() : void
+    }
+
+}
+
+
+
+
+@enduml

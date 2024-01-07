@@ -1,0 +1,97 @@
+@startuml
+
+package View{
+package Side_Panels{
+
++class ActiveRules{
+
+    - appliedRules : JLabel
+    - appliedRulesPanels : JPanel
+    - reducedArmy : JLabel
+    - noRetreat : JLabel
+    - buttons : JButton[]
+    - lines = new JPanel[2] : JPanel[]
+    - firstLine : JPanel
+    - secondLine : JPanel
+
+    + scalePanel(int width, int height) : void
+
+    + tickRules(int gameMode) : void
+
+    - square() : void
+
+    - scalePanels() : void
+
+}
+
+class CapturedMonsters{
+
+    - top : JLabel
+    - capturedPanel : JPanel
+    - bottom : JLabel
+    - monstersPictures : final JLabel[][]
+    - images : JPanel
+    - picturesWidth : int
+    - picturesHeight : int
+    - initialMonsters : final int
+    - captives : final int[]
+    - ID : int
+    - firstPlayersCaptives : final ArrayList<Image>
+    - secondPlayersCaptives : final ArrayList<Image>
+
+    + nextRound(int[] referenceToMonsters) : void
+
+    + scalePanel(int width, int height) : void
+
+    + restartGame() : void
+
+    - setUpBottomHalf() : void
+
+    - setUpLabels() : void
+
+    - setUpImages() : void
+
+    - addCaptiveMonsters() : void
+
+    - getCaptiveMonsters() : void
+
+    - getTotalOfCaptives(int[] referenceToMonsters) : void
+
+    -  setTotalCaptives(int sum) : void
+
+    - getPictures() : void
+
+    - scaleCapturedPanel() : void
+
+}
+
++class Statistics{
+
+    - statistics : JLabel
+    - statisticsPanel : JPanel
+    - playersTurn : JLabel
+    - attackingRate : JLabel
+    - bottomText : JPanel
+    - totalRevivals : JLabel
+    - noRound : JLabel
+    - round : int
+
+    + changeTurn(int ID, int ratio, int revivals) : void
+
+    + changeTurn(int ID, int ratio, int revivals) : void
+
+    + restartGame() : void
+
+    + scalePanels(int width, int height) : void
+
+    - initialisePanels() : void
+
+    - scaleFonts() : void
+
+}
+
+
+}
+}
+
+@enduml

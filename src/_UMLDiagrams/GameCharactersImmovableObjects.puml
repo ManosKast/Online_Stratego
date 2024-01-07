@@ -1,0 +1,92 @@
+@startuml
+
+package Model{
+package game_characters{
+
+interface GameCharactersInterface{
+
++ getRow() : int
+
++ getLine() : int
+
++ getFrontPicture() : Icon
+
++ getBackPicture() : Icon
+
++ getPower() : int
+
++ getPlayersID() : int
+
++ isAlive() : boolean
+
++ move(int nextRow, int nextLine) : void
+
++ attack(GameCharacters defender) : void
+
+
+}
+
++abstract class GameCharacters implements GameCharactersInterface{
+- row : int
+- line : int
+- power : int
+- alive : boolean
+- monstersPicture : Icon
+- cardsBack : Icon
+- ID : int
+
+- void updateCardsPictures() : void
+
+~ kills(GameCharacters dead) : void
+
+~ winsBattleAgainst(GameCharacters defender) : byte
+
+~ isValidStartingPosition(int line, int row, int playersID) : boolean
+
+~ isEnemy(GameCharacters monster) : boolean
+
+~ isValidPosition(int line, int row) : boolean
+
++ getRow() : int
+
++ getLine() : int
+
++ getFrontPicture() : Icon
+
++ getBackPicture() : Icon
+
++ getPower() : int
+
++ getPlayersID() : int
+
++ isAlive() : boolean
+
++ abstract move(int nextRow, int nextLine) : void
+
++ abstract attack(GameCharacters defender) : void
+
+}
+
+package ImmovableObjects{
++abstract class ImmovableObject extends GameCharacters{
+
++ move(int x, int y) : void
+
++ attack(GameCharacters defender) : void
+
+}
+
+package ImmovableMonsters{
+class Flag extends ImmovableObject{}
+
+class Trap extends ImmovableObject{}
+}
+}
+
+package Forbidden_Zone{
+class ForbiddenZone extends ImmovableObject{}
+}
+
+}
+}
+@enduml

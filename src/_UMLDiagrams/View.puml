@@ -1,0 +1,149 @@
+@startuml
+
+package View{
+
++interface ViewInterface{
+
+    + startGame(MouseListener buttonHandler, int gameMode) : void
+
+    + nextRound(Player attacker, Player defender) : void
+
+    + updateBoard(GameCharacters winner, int cLine, int cRow, int nLine, int nRow) : void
+
+    + selectMonsterToRevive(MouseListener handler, Player attacker) : void
+
+    + selectPositionToRevive(List<Integer> positions) : void
+
+    + restartGame(Player attacker, Player defender) : void
+
+    + highlightPositions(List<Integer> validMoveablePositions) : void
+
+    + endGame(Player attacker, MouseListener handler) : void
+
+}
+
++class View{
+
+    - buttonWidth : int
+    - buttonHeight : int
+    - gameMode : int
+    - boardSquares : final JButton[][]
+    - squares : final JPanel
+    - roundPanel : final JPanel
+    - topHalfRoundPanel : final JPanel
+    - window : final Resize
+    - borderedSquares : final List<JButton>
+    - rules : ActiveRules
+    - monsters : CapturedMonsters
+    - stats : Statistics
+    - startingIU : StartingUI
+    - reviveMonster : ReviveMonster
+    - endGameUI : EndGameUI
+
+    + startGame(MouseListener buttonHandler, int gameMode) : void
+
+    + nextRound(Player attacker, Player defender) : void
+
+    + updateBoard(GameCharacters winner, int cLine, int cRow, int nLine, int nRow) : void
+
+    + selectMonsterToRevive(MouseListener handler, Player attacker) : void
+
+    + selectPositionToRevive(List<Integer> positions) : void
+
+    + restartGame(Player attacker, Player defender) : void
+
+    + highlightPositions(List<Integer> validMoveablePositions) : void
+
+    + endGame(Player attacker, MouseListener handler) : void
+
+    - initialiseBoard(MouseListener buttonHandler) : void
+
+    - addForbiddenZone() : void
+
+    - initialiseRoundPanel() : void
+
+    - newIcon(Image cardsImage) : ImageIcon
+
+    - removeBorders() : void
+
+    - concealGame() : void
+
+    - emptyBoard() : void
+
+    - class Resize{}
+
+}
+
+package UI{
+
++class EndGameUI{
+
+    - playerWins : JLabel
+    - options : JPanel
+    - option : JButton[]
+
+    + disableUI() : void
+
+    - initialisePanels(int ID, MouseListener handler) : void
+
+    - scalePanel(int width, int height) : void
+
+    - static class HoverMouse{}
+
+    - class Resize{}
+}
+
++class ReviveMonster{
+
+    - chooseMonster : JLabel
+    - revivalPanel : JPanel
+    - buttons : final JButton[]
+    - ID : final int
+    - playersMonsters : final ArrayList<Image>
+    - initial : final int[]
+    - current : final int[]
+
+    + disablePanel() : void
+
+    - revivePanel(MouseListener handler) : void
+
+    - addMonstersImages() : void
+
+    - scalePanels() : void
+
+    - addButtons(MouseListener handler) : void
+
+    - scaleButtons() : void
+
+    - canRevive(int monster) : boolean
+
+    - class Resize{}
+
+}
+
++class StartingUI{
+
+    - hover : MouseListener
+    - buttons : JPanel
+    - button : JButton[]
+    - chooseMode : JLabel
+
+    + disableUI() : void
+
+    - setupPanels(MouseListener handler) : void
+
+    - scalePanels() : void
+
+    - scalePanel(int width, int height) : void
+
+    - static HoverMouse{}
+
+    - class Resize{}
+
+}
+
+}
+
+}
+
+@enduml

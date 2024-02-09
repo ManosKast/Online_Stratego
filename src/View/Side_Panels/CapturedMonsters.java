@@ -2,7 +2,10 @@ package View.Side_Panels;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
+import java.awt.image.BufferedImage;
+import java.util.Arrays;
+
+import static Util.Util.scaleImage;
 
 public class CapturedMonsters extends JPanel{
     private JLabel top = new JLabel("Captures");
@@ -12,18 +15,15 @@ public class CapturedMonsters extends JPanel{
     private JPanel images; // Πάνελ που περιέχει όλες τις εικόνες.
     private int picturesWidth;
     private int picturesHeight;
-    private final int[] initialMonsters; // Υπάρχει κυρίως για το scaling.
     private final int[] captives = new int[12];
     private int ID;
-    private final ArrayList<Image> firstPlayersCaptives;
-    private final ArrayList<Image> secondPlayersCaptives;
+    private final BufferedImage[] enemyMonsters;
+    private int[] capturedMonsters;
 
-    public CapturedMonsters(int width, int height,  int gameMode){
-        this.initialMonsters = ((gameMode != 2) && (gameMode != 3)) ? new int[]{1, 6, 1, 4, 5, 2, 2, 2, 3, 2, 1, 1} :
-                                                                      new int[]{1, 3, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1};
-
-        this.firstPlayersCaptives = new ArrayList<>();
-        this.secondPlayersCaptives = new ArrayList<>();
+    public CapturedMonsters(int width, int height, BufferedImage[] enemyMonsters){
+        this.enemyMonsters = enemyMonsters;
+        this.capturedMonsters = new int[enemyMonsters.length];
+        for (int i = 0; i < enemyMonsters.length; i++) this.capturedMonsters[i] = 0;
 
         // Το Resize του View, επικαλείται πάντα στην αρχή.
         // Εφόσον δε δημιούργησα μέθοδο αρχικοποίησης των πάνελς
@@ -82,7 +82,7 @@ public class CapturedMonsters extends JPanel{
             }
         }
 
-        this.getPictures();
+        this.getCaptiveMonsters();
     }
 
     private void addCaptiveMonsters(){
@@ -106,18 +106,13 @@ public class CapturedMonsters extends JPanel{
         int height = this.getHeight() / 5;
         int width = this.getWidth() / 6;
 
-        ImageIcon monstersImage;
-
         Font font = new Font("Verdana", Font.BOLD + Font.ITALIC, size);
-
-        ArrayList<Image> images = (this.ID == 1) ? secondPlayersCaptives : firstPlayersCaptives;
 
         for(int i = 0; i < 4; ++i){
             for(int j = 0; j < 3; ++j){
                 monstersPictures[i][j].setFont(font);
-                monstersPictures[i][j].setText(Integer.toString(captives[monster]));
-                monstersPictures[i][j].setIcon(new ImageIcon(images.get(monster).getScaledInstance(width,
-                                                                            height, Image.SCALE_SMOOTH)));
+                monstersPictures[i][j].setText(Integer.toString(capturedMonsters[monster]));
+                monstersPictures[i][j].setIcon(scaleImage(enemyMonsters[monster], width, height));
                 ++monster;
             }
         }
@@ -131,57 +126,17 @@ public class CapturedMonsters extends JPanel{
         int sum = 0;
 
         for(int i = 0; i < size; ++i) {
-            captives[i] = this.initialMonsters[i] - referenceToMonsters[i];
+            captives[i] = capturedMonsters[i];
             sum += captives[i];
         }
 
         this.setTotalCaptives(sum);
-
     }
 
     private void setTotalCaptives(int sum){
         this.bottom.setText("Captured: " + sum);
     }
 
-    // Προσθέτει τις εικόνες των τεράτων που έκαστος παίκτης μπορεί να αιχμαλωτίσει.
-    private void getPictures(){
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/flagB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/flagR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/trapB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/trapR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/slayerB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/slayerR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/scoutB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/scoutR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/dwarfB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/dwarfR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/elfB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/elfR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/yeti.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/lavaBeast.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/sorceressB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/sorceressR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/beastRiderB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/beastRiderR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/knightB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/knightR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/mageB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/mageR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/dragonB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/dragonR.png").getImage());
-    }
 
     public void scalePanel(int width, int height){
         if(this.ID == -1){
@@ -198,12 +153,46 @@ public class CapturedMonsters extends JPanel{
     }
 
     // Επειδή, αλλάζει μόνο του rounds.
-    public void restartGame(){this.ID = 2;}
+    public void restartGame(){
+        Arrays.fill(capturedMonsters, 0);
+
+        for(JLabel[] row : monstersPictures)
+            for(JLabel monster : row)
+                monster.setText(Integer.toString(0));
+
+        setTotalCaptives(0);
+    }
 
     private void scaleCapturedPanel(){
         int size = this.getHeight() / 30;
 
         this.top.setFont(new Font("Verdana", Font.BOLD + Font.ITALIC, 2 * size));
         this.bottom.setFont(new Font("Verdana", Font.BOLD + Font.ITALIC, size));
+    }
+
+    public void captureMonster(int index) {
+        ++this.capturedMonsters[index];
+        updateCapturedMonsters(index);
+    }
+
+    public void rescueMonster(int index) {
+        --this.capturedMonsters[index];
+        updateCapturedMonsters(index);
+    }
+
+    private void updateCapturedMonsters(int index) {
+        int row = index / 3;
+        int col = index % 3;
+        int size = this.getHeight() / 23;
+        // TODO: Font class's field.
+        Font font = new Font("Verdana", Font.BOLD + Font.ITALIC, size);
+
+        monstersPictures[row][col].setFont(font);
+        monstersPictures[row][col].setText(Integer.toString(capturedMonsters[index]));
+
+        int sum = 0;
+        for(int captives : capturedMonsters) sum += captives;
+
+        setTotalCaptives(sum);
     }
 }

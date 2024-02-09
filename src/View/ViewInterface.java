@@ -13,7 +13,8 @@ public interface ViewInterface {
      * @param buttonHandler must be a valid MouseListener object, so that it processes the player's interactions.
      * @param gameMode must be an integer that ranges from 0 to 3.
      */
-    public void startGame(MouseListener buttonHandler, int gameMode);
+    // TODO: Change params where necessary.
+    public void startGame(MouseListener buttonHandler, MouseListener monsterSelection, int gameMode, int turn);
 
 
     /**
@@ -51,9 +52,8 @@ public interface ViewInterface {
     /**
      * Displays a panel containing monsters the attacker can revive.
      * @param handler must be a valid MouseListener object that interacts with the player.
-     * @param attacker must be a pointer to the current attacker.
      */
-    public void selectMonsterToRevive(MouseListener handler, Player attacker);
+    public void selectMonsterToRevive(MouseListener handler, int ID, int[] capturedMonsters);
 
     /**
      * Highlights the positions the selected monster can be revived.

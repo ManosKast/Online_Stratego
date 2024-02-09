@@ -117,7 +117,7 @@ public interface PlayerInterface {
      * @return An array containing pictures of all monsters this player has captured.
      * Otherwise, it returns null. If the game has ended it returns null.
      */
-    List<GameCharacters> getCapturedMonsters();
+    int[] getCapturedMonsters();
 
     /**
      * Checks if the given position is valid to revive the attacker's monster.
@@ -169,6 +169,6 @@ public interface PlayerInterface {
      * @param monster must be an integer that ranges from 2 to 12.
      * @return true if the monster can revive, otherwise it returns false.
      */
-    boolean monsterCanRevive(int monster);
+    boolean isCaptured(int monster);
 
 }

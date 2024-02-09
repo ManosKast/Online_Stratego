@@ -2,12 +2,14 @@ package Model.Player_and_Board;
 
 import GamesException.IllegalPlayerException;
 import Model.game_characters.*;
+import Model.game_characters.ImmovableObjects.Forbidden_Zone.ForbiddenZone;
 import Model.game_characters.ImmovableObjects.ImmovableMonsters.*;
 import Model.game_characters.MoveableObjects.Regular_Monsters.*;
 import Model.game_characters.MoveableObjects.SpecialMoveableObjects.Special_Characters.*;
 
 import javax.swing.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -19,6 +21,7 @@ public class Player implements PlayerInterface {
     // 0 : Flag , 1 : Trap, 2 : Slayer , 3 : Scout , 4 : Dwarf , 5 : Elf , 6 : Lava Beast / Yeti ,
     // 7 : Sorceress , 8 : Beast Rider , 9 : Knight , 10 : Mage , 11 : Dragon .
 
+    // TODO: Add in referenceToMonsters third row that contains captured monsters.
     private int[][] referenceToMonsters;
     private static Board gameBoard; // Περιέχει ένα reference του ταμπλού.
     private int ID; // Για να ταυτοποιείται ο παίκτης.
@@ -32,7 +35,7 @@ public class Player implements PlayerInterface {
 
     // Πίνακας δύο αντικειμένων τύπου τεράτων. Μόνο δύο φορές μπορεί να αναγεννήσει
     // τέρας κάθε παίκτης και πρέπει να είναι διαφορετικά τέρατα.
-    private GameCharacters[] monstersThatCanRevive;
+    private final GameCharacters[] monstersThatCanRevive = new GameCharacters[2];
     private static int playerCount = 0; // Συγκρατεί το πλήθος των παικτών που παίζουν.
     private ImageIcon cardsBackImage; // Πίσω μέρος της κάρτας.
     private int revivals; // Σύνολο αναγεννήσεων.
@@ -79,8 +82,6 @@ public class Player implements PlayerInterface {
         this.aliveMonsters = new ArrayList<>();
         this.capturedMonsters = new ArrayList<>();
 
-        gameBoard.getPlayersAliveMonsters(this.aliveMonsters, this.ID);
-
         this.cardsBackImage = (this.ID == 1) ? new ImageIcon("src/images/bluePieces/blueHidden.png") :
                 new ImageIcon("src/images/RedPieces/redHidden.png");
 
@@ -119,8 +120,6 @@ public class Player implements PlayerInterface {
         this.aliveMonsters = new ArrayList<>();
         this.capturedMonsters = new ArrayList<>();
 
-        gameBoard.getPlayersAliveMonsters(this.aliveMonsters, this.ID);
-
         this.cardsBackImage = (this.ID == 1) ? new ImageIcon("src/images/bluePieces/blueHidden.png") :
                 new ImageIcon("src/images/RedPieces/redHidden.png");
 
@@ -136,9 +135,6 @@ public class Player implements PlayerInterface {
         this.referenceToMonsters[1] = (mode != 2 && mode != 3) ? new int[]{1, 6, 1, 4, 5, 2, 2, 2, 3, 2, 1, 1} :
                 new int[]{1, 3, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1};
 
-        this.monstersThatCanRevive = new GameCharacters[2];
-        this.monstersThatCanRevive[0] = null;
-        this.monstersThatCanRevive[1] = null;
     }
 
     // Εντολή που χρησιμοποιεί ο παίκτης για να μετακινήσει τέρας του.
@@ -207,8 +203,7 @@ public class Player implements PlayerInterface {
                 endingLine = (ID == 1) ? 3 : 8;
                 startingRow = 0;
                 endingRow = 10;
-            }
-            else{
+            } else{
                 startingLine = (ID == 1) ? 0 : 6;
                 endingLine = (ID == 1) ? 2 : 8;
                 startingRow = 1;
@@ -221,6 +216,8 @@ public class Player implements PlayerInterface {
                 canRevive = true;
             else if(this.ID == 2 && monster.getLine() == 0)
                 canRevive = true;
+
+            System.out.println("First Can revive: " + canRevive + ", ID: " + this.ID + ", line: " + monster.getLine());
 
             // Εάν το τέρας βρίσκεται σε τοποθεσία ικανή για αναγέννηση και υπάρχει χώρος
             // για να πραγματοποιηθεί η αναγέννηση, τότε είναι ικανή η αναγέννηση.
@@ -239,6 +236,7 @@ public class Player implements PlayerInterface {
             }
         }
 
+        System.out.println("Can revive: " + canRevive);
         return canRevive;
     }
 
@@ -284,10 +282,11 @@ public class Player implements PlayerInterface {
         return revive;
     }
 
-    public boolean monsterCanRevive(int monster){
+    public boolean isCaptured(int monster){
         if(monster < 0)
             return false;
 
+        System.out.println("Captured: " + (this.referenceToMonsters[0][monster + 2] != this.referenceToMonsters[1][monster + 2]));
         // Εάν ισοδυναμεί η παρακάτω παράσταση, τότε δεν έχει αιχμαλωτιστεί κανένα τέρας monster.
         return (this.referenceToMonsters[0][monster + 2] != this.referenceToMonsters[1][monster + 2]);
     }
@@ -300,13 +299,15 @@ public class Player implements PlayerInterface {
     private boolean monsterCanRevive(GameCharacters monster){
         if(monster == null)
             return false;
-        if(monster.getPlayersID() != this.ID)
-            return false;
 
-        boolean canRevive = (this.monstersThatCanRevive[0] != monster) && (!(monster instanceof Scout));
-        return (canRevive && ( this.monstersThatCanRevive[1] == null ));
+        boolean isPlayersMonster = (monster.getPlayersID() == this.ID);
+        boolean notScout = !(monster instanceof Scout);
+        boolean hasNeverRevived = (this.monstersThatCanRevive[0] != monster);
+        boolean notReachedMaxRevivals = this.monstersThatCanRevive[1] == null;
+        return (isPlayersMonster && notScout && hasNeverRevived && notReachedMaxRevivals);
     }
 
+    // TODO: Change this.
     private void addToMonsterReferences(GameCharacters deadMonster){
         if(deadMonster instanceof BeastRider)
             ++this.referenceToMonsters[0][8];
@@ -344,11 +345,17 @@ public class Player implements PlayerInterface {
 
     // Επιστρέφει έναν πίνακα τύπου Icon με όλες τις εικόνες των αιχμαλωτισμένων τεράτων.
     // Αν ο παίκτης δεν έχει αιχμαλωτίσει κανένα τέρας, τότε επιστρέφει null.
-    public List<GameCharacters> getCapturedMonsters(){
+    public int[] getCapturedMonsters(){
         if(!this.matchContinues())
             return null;
 
-       return this.capturedMonsters;
+        int[] capturedMonsters = new int[referenceToMonsters[0].length];
+        for (int[] referenceToMonster : referenceToMonsters) {
+            for (int j = 0; j < referenceToMonster.length; ++j) {
+                capturedMonsters[j] = referenceToMonsters[1][j] - referenceToMonsters[0][j];
+            }
+        }
+       return capturedMonsters;
     }
 
     public List<GameCharacters> getPlayersAliveMonsters(){
@@ -518,6 +525,17 @@ public class Player implements PlayerInterface {
         return revivalPositions;
     }
 
+    public boolean canPositionMonster(int row, int col, int monster) {
+        return gameBoard.canPositionMonster(row, col, this.ID, monster);
+    }
+
+    // TODO: Rename getValidRevivalPositions.
+    public List<Integer> isAvailableMonster(int monster) {
+        if (monster < 0 || monster > 11) return null;
+        if (gameBoard.canDeployMonster(monster, this.ID)) return getValidRevivalPositions();
+        return null;
+    }
+
 
     public void restartGame(Player otherPlayer){
 
@@ -567,6 +585,45 @@ public class Player implements PlayerInterface {
 
     public void testAttack(GameCharacters attackingMonster, Player defender, GameCharacters defendingMonster) {
         gameBoard.testAttack(this, attackingMonster, defender, defendingMonster);
+    }
+
+    public int[][] invertBoard() {
+        if(ID != 1) return null;
+
+        GameCharacters[][] board = gameBoard.getBoard();
+        int height = board.length;
+        int width = board[0].length;
+
+        int[][] invertedBoard = new int[height][width];
+        for(int i = 0; i < height; ++i){
+            for(int j = 0; j < width; ++j){
+                GameCharacters monster = board[i][j];
+                if (monster == null) invertedBoard[height - i - 1][width - j - 1] = -1;
+                else if (monster instanceof ForbiddenZone) invertedBoard[height - i - 1][width - j - 1] = -1;
+                else if (monster.getPlayersID() == ID) {
+                    int label = (monster.getPower() != Integer.MAX_VALUE) ? monster.getPower() : 11;
+                    invertedBoard[height - i - 1][width - j - 1] = label;
+                } else invertedBoard[height - i - 1][width - j - 1] = 12;
+            }
+        }
+        System.out.println(Arrays.deepToString(invertedBoard));
+        return invertedBoard;
+    }
+
+    public int clearPosition(int[] position) {
+        return gameBoard.clearPosition(position, this.ID);
+    }
+
+    public List<Integer> randomiseBoard() {
+        return gameBoard.randomBoardSetup(this.ID);
+    }
+
+    public boolean isReady() {
+        if (gameBoard.isReady(this.ID)) {
+            gameBoard.getPlayersAliveMonsters(this.aliveMonsters, this.ID);
+            return true;
+        }
+        return false;
     }
 
     // Για τη ταξινόμηση των τεράτων των captured τεράτων.

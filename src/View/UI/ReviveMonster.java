@@ -5,7 +5,10 @@ import java.awt.*;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.awt.event.MouseListener;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+
+import static Util.Util.scaleImage;
 
 public class ReviveMonster extends JPanel {
 
@@ -14,18 +17,17 @@ public class ReviveMonster extends JPanel {
     private final JButton[] buttons = new JButton[10];
     private final int ID;
     private final ArrayList<Image> playersMonsters;
-    private final int[] initial;
-    private final int[] current;
+    private final int[] capturedMonsters;
+    private final BufferedImage[] monsters;
 
-    public ReviveMonster(int width, int height, int[] initialMonsters, int[] currentMonsters, int ID,
-                                                                                            MouseListener handler){
+    public ReviveMonster(int width, int height, int[] capturedMonsters, int ID, BufferedImage[] monsters, MouseListener handler){
         this.setSize(width, height);
         this.setLayout(new BorderLayout());
         this.setBackground(Color.BLACK);
         this.addComponentListener(new Resize());
 
-        this.initial = initialMonsters;
-        this.current = currentMonsters;
+        this.monsters = monsters;
+        this.capturedMonsters = capturedMonsters;
         this.ID = ID;
         this.playersMonsters = new ArrayList<>();
 
@@ -114,20 +116,14 @@ public class ReviveMonster extends JPanel {
         int width = this.getWidth() * 29 / 150;
         int height = this.getHeight() * 29 / 60;
 
-        Image monstersImage;
-        ImageIcon monstersIcon;
-
         for(int i = 0; i < 10; ++i){
-            monstersImage = this.playersMonsters.get(i);
-            monstersIcon = new ImageIcon(monstersImage.getScaledInstance(width, height, Image.SCALE_SMOOTH));
-
+            ImageIcon monstersIcon = scaleImage(monsters[i + 1], width, height);
             this.buttons[i].setIcon(monstersIcon);
             this.buttons[i].setDisabledIcon(monstersIcon);
 
             // Εάν δεν έχει αιχμαλωτηθεί τέρας του εν λόγω είδους, τότε δε γίνεται να αναγεννηθεί.
-            if(!this.canRevive(i))
+            if(!this.canRevive(i + 2))
                 this.buttons[i].setEnabled(false);
-
         }
     }
 
@@ -136,7 +132,7 @@ public class ReviveMonster extends JPanel {
     // Το currentMonsters συγκρατεί τα τέρατα που διαθέτει ο εν λόγω παίκτης.
     // monster + 2, επειδή οι δείκτες 0 και 1 περιέχουν τη σημαία και τις παγίδες.
     private boolean canRevive(int monster){
-        return (this.initial[monster + 2] - this.current[monster + 2] != 0);
+        return (this.capturedMonsters[monster] != 0);
     }
 
     // Αφαιρεί το πάνελ από το φρέιμ του View.

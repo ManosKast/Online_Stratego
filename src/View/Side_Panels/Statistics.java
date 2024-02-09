@@ -1,5 +1,7 @@
 package View.Side_Panels;
 
+import Protocol.Flag;
+
 import javax.swing.*;
 import java.awt.*;
 
@@ -13,11 +15,35 @@ public class Statistics extends JPanel {
     private JLabel totalRevivals;
     private JLabel noRound;
     private int round;
+    private int playerID;
+    private final String yourTurn = "Your turn";
+    private final static String opponentsTurn = "Opponent's turn";
+    private final static String opponentReviving = "Opponent is reviving";
+    private boolean myTurn;
+    private int revivalCount = 0;
 
-    public Statistics(int width, int height){
+
+    public Statistics(int width, int height, int ID){
         this.setSize(width, height);
         this.setLayout(new BorderLayout());
+        this.playerID = ID;
         initialisePanels();
+    }
+
+    public Statistics(int width, int height, int ID, byte flag, byte turn) {
+        this.setSize(width, height);
+        this.setLayout(new BorderLayout());
+        this.playerID = ID;
+        this.myTurn = (turn == Flag.FIRST);
+        System.out.println(myTurn);
+        initialisePanels();
+
+        if (flag == Flag.WAITING_OPPONENT){
+            this.playersTurn.setText("Waiting for opponent");
+        } else if (flag == Flag.START_GAME) {
+            String text = (myTurn) ? yourTurn : opponentsTurn;
+            this.playersTurn.setText(text);
+        }
     }
 
     private void initialisePanels(){
@@ -29,7 +55,7 @@ public class Statistics extends JPanel {
         statisticsPanel.setLayout(new BorderLayout());
         statisticsPanel.setBackground(Color.GRAY);
 
-        playersTurn = new JLabel("Player 1 turn");
+        playersTurn = new JLabel("");
         playersTurn.setHorizontalAlignment(SwingConstants.CENTER);
         playersTurn.setForeground(Color.WHITE);
 
@@ -59,17 +85,42 @@ public class Statistics extends JPanel {
         this.add(statisticsPanel, BorderLayout.CENTER);
     }
 
-    // Αλλάζει το πάνελ των στατιστικών.
-    public void changeTurn(int ID, int ratio, int revivals){
+    public void nextRound() {
+        System.out.println(myTurn);
         ++this.round;
-
-        this.playersTurn.setText("Player " + ID + " turn");
-        this.attackingRate.setText("  Successful attacking rate: " + ratio + "%");
-
-        this.totalRevivals.setText("  Revivals: " + revivals);
-
+        myTurn = !myTurn;
+        String text = (myTurn) ? yourTurn : opponentsTurn;
+        this.playersTurn.setText(text);
         this.noRound.setText("Round: " + this.round + "  ");
+    }
 
+    public void nextRound(int ratio) {
+        nextRound();
+        attackingRate.setText("  Successful attacking rate: " + ratio + "%");
+    }
+
+
+    public void retractNextRound() {
+        String text = (myTurn) ? yourTurn : opponentsTurn;
+        myTurn = !myTurn;
+        this.playersTurn.setText(text);
+        this.noRound.setText("Round: " + --this.round + "  ");
+    }
+
+    public void decrementNextRound() {
+        myTurn = !myTurn;
+        this.noRound.setText("Round: " + --this.round + "  ");
+    }
+
+    public void enemyReviving() {
+        // nextRound gets called after a successful move, so we need to undo its effects.
+        myTurn = !myTurn;
+        noRound.setText("Round: " + --round + "  ");
+        this.playersTurn.setText("Enemy is reviving");
+    }
+
+    public void incrementRevivals() {
+        this.totalRevivals.setText("  Revivals: " + ++this.revivalCount);
     }
 
     private void scaleFonts(){
@@ -86,10 +137,20 @@ public class Statistics extends JPanel {
         noRound.setFont(new Font("Verdana", Font.BOLD + Font.ITALIC, size));
     }
 
-    public void restartGame(){this.round = 0;}
+    public void restartGame(byte turn){
+        this.round = 0;
+        myTurn = (turn == Flag.FIRST);
+        nextRound();
+    }
+
     public void scalePanels(int width, int height){
         this.setSize(width, height);
         this.scaleFonts();
     }
 
+    public void opponentReady(byte turn) {
+        myTurn = (turn == Flag.FIRST);
+        String text = (myTurn) ? yourTurn : opponentsTurn;
+        this.playersTurn.setText(text);
+    }
 }

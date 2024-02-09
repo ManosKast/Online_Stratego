@@ -2,10 +2,11 @@ package View;
 
 import Model.Player_and_Board.Player;
 import Model.game_characters.GameCharacters;
-import Model.game_characters.ImmovableObjects.ImmovableMonsters.Flag;
-import Model.game_characters.ImmovableObjects.ImmovableMonsters.Trap;
+
+import Protocol.Flag;
 import View.Side_Panels.ActiveRules;
 import View.Side_Panels.CapturedMonsters;
+import View.Side_Panels.SelectionUI;
 import View.Side_Panels.Statistics;
 import View.UI.EndGameUI;
 import View.UI.ReviveMonster;
@@ -19,11 +20,13 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
+
+import static Util.Util.scaleImage;
 
 public class View extends JFrame implements ViewInterface {
 
@@ -41,10 +44,10 @@ public class View extends JFrame implements ViewInterface {
     private Statistics stats;
     private final StartingUI startingUI;
     private ReviveMonster reviveMonster;
+    private SelectionUI selectionUI;
     private EndGameUI endGameUI;
-    private BufferedImage[] voidMonstersPictures = new BufferedImage[13];
-    private BufferedImage[] lightMonstersPictures = new BufferedImage[13];
-    private ImageIcon[] cardsBack = new ImageIcon[2];
+    private final BufferedImage[] voidMonstersPictures = new BufferedImage[13];
+    private final BufferedImage[] lightMonstersPictures = new BufferedImage[13];
     private final BufferedImage[][] currentButtonsImages = new BufferedImage[8][10];
     private BufferedImage[] userMonsters;
     private BufferedImage[] opponentMonsters;
@@ -139,7 +142,7 @@ public class View extends JFrame implements ViewInterface {
                 boardSquares[i][j] = new JButton();
                 newButton = boardSquares[i][j];
 
-                newButton.setName("" + i + j);
+                newButton.setName(String.valueOf(i) + j);
                 newButton.addMouseListener(buttonHandler);
                 newButton.setRolloverEnabled(false);
 
@@ -149,7 +152,7 @@ public class View extends JFrame implements ViewInterface {
 
         this.addForbiddenZone();
 
-        this.add(squares, FlowLayout.LEFT);
+        this.add(squares, BorderLayout.CENTER);
     }
 
     // Προσθέτει την απαγορευμένη ζώνη.
@@ -167,7 +170,10 @@ public class View extends JFrame implements ViewInterface {
         }
     }
 
-    private void initialiseRoundPanel(){
+    private void initialiseRoundPanel(byte flag, int turn){
+        this.remove(selectionUI);
+        selectionUI.setVisible(false);
+
         int width = this.getWidth() - this.squares.getWidth();
         int height = this.getHeight() - 35;
 
@@ -180,8 +186,8 @@ public class View extends JFrame implements ViewInterface {
         this.rules = new ActiveRules(width, height / 4);
         this.rules.tickRules(gameMode);
 
-        this.stats = new Statistics(width, height / 4);
-        this.monsters = new CapturedMonsters(width, height / 2, gameMode);
+        this.stats = new Statistics(width, height / 4, turn);
+        this.monsters = new CapturedMonsters(width, height / 2, opponentMonsters);
 
         this.topHalfRoundPanel.add(this.rules);
         this.topHalfRoundPanel.add(this.stats);
@@ -192,49 +198,94 @@ public class View extends JFrame implements ViewInterface {
         this.add(roundPanel, BorderLayout.EAST);
     }
 
-    public void startGame(MouseListener buttonHandler, int gameMode){
+    public void startGame(MouseListener buttonHandler, MouseListener monsterSelection, int gameMode, int turn){
         this.gameMode = gameMode;
+        userMonsters = (turn == 1) ? lightMonstersPictures : voidMonstersPictures;
+        opponentMonsters = (turn == 1) ? voidMonstersPictures : lightMonstersPictures;
 
         this.startingUI.disableUI();
 
         this.initialiseBoard(buttonHandler);
-        this.initialiseRoundPanel();
+        this.initialiseMonsterSelection(monsterSelection);
 
         this.setVisible(true);
         this.addComponentListener(window);
     }
 
+    // TODO: Add it in interface
+    private void initialiseMonsterSelection(MouseListener monsterSelection) {
+        int width = this.getWidth() - this.squares.getWidth();
+        int height = this.getHeight() - 35;
+        this.selectionUI = new SelectionUI(width, height, gameMode, monsterSelection, userMonsters);
+        this.add(selectionUI, BorderLayout.EAST);
+    }
+
+
+    public void startGame(byte flag, byte turn) {
+        this.remove(selectionUI);
+        selectionUI.setVisible(false);
+        selectionUI.setEnabled(false);
+
+        int width = this.getWidth() - this.squares.getWidth();
+        int height = this.getHeight() - 35;
+
+        this.roundPanel.setSize(new Dimension(width, height));
+        this.roundPanel.setLayout(new GridLayout(2, 1));
+
+        this.topHalfRoundPanel.setLayout(new GridLayout(2, 1));
+        this.topHalfRoundPanel.setSize(new Dimension(width, height / 2));
+
+        this.rules = new ActiveRules(width, height / 4);
+        this.rules.tickRules(gameMode);
+
+        this.stats = new Statistics(width, height / 4, turn, flag, turn);
+        this.monsters = new CapturedMonsters(width, height / 2, opponentMonsters);
+
+        this.topHalfRoundPanel.add(this.rules);
+        this.topHalfRoundPanel.add(this.stats);
+
+        this.roundPanel.add(this.topHalfRoundPanel);
+        this.roundPanel.add(this.monsters);
+
+        this.add(roundPanel, BorderLayout.EAST);
+
+        this.repaint();
+        this.setVisible(true);
+    }
+
+    public void opponentReady(byte flag, byte turn) {
+        if (flag == Flag.OPPONENT_READY) {
+            stats.opponentReady(turn);
+            repaint();
+            setVisible(true);
+        }
+    }
     @Override
     public void nextRound(Player attacker, Player defender) {
 
     }
 
-
-    private BufferedImage scaleImage(BufferedImage originalImage, int targetWidth, int targetHeight) {
-        BufferedImage scaledImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2d = scaledImage.createGraphics();
-
-        // Improve the scaling quality
-        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-        g2d.drawImage(originalImage, 0, 0, targetWidth, targetHeight, null);
-        g2d.dispose();
-
-        return scaledImage;
+    public void nextRound() {
+        stats.nextRound();
     }
 
-    // Refactor newImage method to return an ImageIcon
-    private ImageIcon newIcon(BufferedImage originalImage) {
-        BufferedImage scaledImage = scaleImage(originalImage, buttonWidth, buttonHeight);
-        return new ImageIcon(scaledImage);
+    public void nextRound(int ratio) {
+        stats.nextRound(ratio);
     }
 
-    // TODO: Bug with resizing.
+    public void retractNextRound() {
+        stats.retractNextRound();
+    }
+
+    public void decrementNextRound(){
+        stats.decrementNextRound();
+    }
+
+    public void enemyReviving(){stats.enemyReviving();}
+
+    // TODO: Bug with resizing. Remove it.
     void resizeImage(int row, int column) {
-        System.out.println("Resizing image");
-        boardSquares[row][column].setIcon(newIcon(currentButtonsImages[row][column]));
+        boardSquares[row][column].setIcon(scaleImage(currentButtonsImages[row][column], buttonWidth, buttonHeight));
     }
 
     public void highlightPositions(List<Integer> validMoveablePositions){
@@ -276,12 +327,15 @@ public class View extends JFrame implements ViewInterface {
     public void moveCharacter(int[] previousPosition, int[] nextPosition){
         int pRow = previousPosition[0], pColumn = previousPosition[1];
         int nRow = nextPosition[0], nColumn = nextPosition[1];
+        System.out.println(Arrays.toString(previousPosition) + "||" + Arrays.toString(nextPosition));
 
         currentButtonsImages[nRow][nColumn] = currentButtonsImages[pRow][pColumn];
         currentButtonsImages[pRow][pColumn] = null;
-        boardSquares[nRow][nColumn].setIcon(newIcon(currentButtonsImages[nRow][nColumn]));
+        boardSquares[nRow][nColumn].setIcon(scaleImage(currentButtonsImages[nRow][nColumn], buttonWidth, buttonHeight));
         boardSquares[pRow][pColumn].setIcon(null);
 
+        repaint();
+        setVisible(true);
         this.removeBorders();
     }
 
@@ -294,13 +348,13 @@ public class View extends JFrame implements ViewInterface {
     }
 
 
-    public void selectMonsterToRevive(MouseListener handler, Player attacker){
+    public void selectMonsterToRevive(MouseListener handler, int ID, int[] capturedMonsters){
         this.concealGame();
 
-        reviveMonster = new ReviveMonster(this.getWidth(), this.getHeight(), attacker.getInitialReferenceToMonsters(),
-                                                        attacker.getReferenceToMonsters(), attacker.getID(), handler);
+        stats.retractNextRound();
+        reviveMonster = new ReviveMonster(this.getWidth(), this.getHeight(), capturedMonsters, ID, userMonsters, handler);
 
-        this.add(reviveMonster);
+        this.add(reviveMonster, BorderLayout.CENTER);
         this.repaint();
         this.setVisible(true);
     }
@@ -312,46 +366,88 @@ public class View extends JFrame implements ViewInterface {
             return;
 
         reviveMonster.disablePanel();
+        this.remove(reviveMonster);
 
+        this.add(squares, BorderLayout.CENTER);
+        this.add(roundPanel, BorderLayout.EAST);
         this.squares.setVisible(true);
         this.roundPanel.setVisible(true);
 
         this.highlightPositions(positions);
     }
 
+    public void reviveMonster(int monster, int[] position){
+        int row = position[0], col = position[1];
+        currentButtonsImages[row][col] = userMonsters[monster];
+        boardSquares[row][col].setIcon(scaleImage(userMonsters[monster], buttonWidth, buttonHeight));
+        stats.incrementRevivals();
+        removeBorders();
+    }
+
+    public void enemyRevivedMonster(int monster, int[] position){
+        int row = position[0], col = position[1];
+        currentButtonsImages[row][col] = userMonsters[12];
+        boardSquares[row][col].setIcon(scaleImage(userMonsters[12], buttonWidth, buttonHeight));
+        monsters.rescueMonster(monster + 1);
+        removeBorders();
+    }
+
     // Κρύβει το επιτραπέζιο παιχνίδι, για να εμφανίσει το πάνελ αναγέννησης.
     private void concealGame(){
         this.squares.setVisible(false);
+        this.remove(squares);
         this.roundPanel.setVisible(false);
+        this.remove(roundPanel);
     }
 
-    public void endGame(Player attacker, MouseListener handler){
+    public void endGame(MouseListener handler, String outcome){
         this.concealGame();
 
-        endGameUI = new EndGameUI(this.getWidth(), this.getHeight(), attacker.getID(), handler);
+        endGameUI = new EndGameUI(this.getWidth(), this.getHeight(), outcome, handler);
 
-        this.add(endGameUI);
+        this.add(endGameUI, BorderLayout.CENTER);
+        this.repaint();
+        this.setVisible(true);
     }
 
+    // TODO: Remove and modify signature in interface.
+    public void restartGame(Player attacker, Player defender){}
 
-    public void restartGame(Player attacker, Player defender){
+    public void restartGame(int[][] board, byte flag) {
         endGameUI.disableUI();
 
-        this.squares.setVisible(true);
-        this.roundPanel.setVisible(true);
+        this.add(squares, BorderLayout.CENTER);
+        this.add(roundPanel, BorderLayout.EAST);
 
-        this.emptyBoard();
-        this.stats.restartGame();
-        this.monsters.restartGame();
+        squares.setEnabled(true);
+        squares.setVisible(true);
 
-        this.nextRound(attacker, defender);
+        roundPanel.setEnabled(true);
+        roundPanel.setVisible(true);
+
+        stats.restartGame(flag);
+        monsters.restartGame();
+
+        emptyBoard();
+        test(board);
+
+        repaint();
+        setVisible(true);
+    }
+
+    //TODO: Change implementation's signature.
+    @Override
+    public void endGame(Player attacker, MouseListener handler) {
+
     }
 
     // Αφαιρεί όλα τα στοιχεία απ΄το ταμπλό.
     private void emptyBoard(){
         for(int i = 0; i < 8; ++i)
-            for(int j = 0; j < 10; ++j)
+            for(int j = 0; j < 10; ++j) {
                 boardSquares[i][j].setIcon(null);
+                currentButtonsImages[i][j] = null;
+            }
     }
 
     public void displayBattlingMonsters(int[] attackerPosition, int[] defenderPosition, int enemyMonster){
@@ -362,18 +458,14 @@ public class View extends JFrame implements ViewInterface {
         resizeImage(dRow, dCol);
         boardSquares[dRow][dCol].setBorder(BorderFactory.createLineBorder(Color.RED, buttonWidth / 10));
         boardSquares[aRow][aCol].setBorder(BorderFactory.createLineBorder(Color.RED, buttonWidth / 10));
-        // TODO: I think upon resizing it gets green, due to resizal.
+        // TODO: I think upon resizing it gets green, due to Resizing class.
         borderedSquares.add(boardSquares[dRow][dCol]);
         borderedSquares.add(boardSquares[aRow][aCol]);
 
         repaint();
     }
 
-    public void test(int[][] board, byte turn){
-        BufferedImage[] pictures = (turn == 1) ? lightMonstersPictures : voidMonstersPictures;
-        userMonsters = (turn == 1) ? lightMonstersPictures : voidMonstersPictures;
-        opponentMonsters = (turn == 1) ? voidMonstersPictures : lightMonstersPictures;
-
+    public void test(int[][] board){
         BufferedImage image;
         this.removeBorders();
         this.buttonHeight = boardSquares[0][0].getHeight();
@@ -381,9 +473,9 @@ public class View extends JFrame implements ViewInterface {
         for(int i = 0; i < 8; ++i) {
             for (int j = 0; j < 10; ++j) {
                 if (board[i][j] >= 0) {
-                    if (board[i][j] == Integer.MAX_VALUE) image = pictures[11];
-                    else image = pictures[board[i][j]];
-                    boardSquares[i][j].setIcon(newIcon(image));
+                    if (board[i][j] == Integer.MAX_VALUE) image = userMonsters[11];
+                    else image = userMonsters[board[i][j]];
+                    boardSquares[i][j].setIcon(scaleImage(image, buttonWidth, buttonHeight));
                     currentButtonsImages[i][j] = image;
                 }
             }
@@ -404,8 +496,38 @@ public class View extends JFrame implements ViewInterface {
     public void concealMonster(int[] conceal) {
         int row = conceal[0], col = conceal[1];
         currentButtonsImages[row][col] = userMonsters[12];
-        boardSquares[row][col].setIcon(newIcon(userMonsters[12]));
+        boardSquares[row][col].setIcon(scaleImage(userMonsters[12], buttonWidth, buttonHeight));
         removeBorders();
+    }
+
+    public void updateCaptivePanel(int monster) {
+        monsters.captureMonster(monster);
+    }
+
+    public void positionMonster(int selectedMonster, int[] position) {
+        int row = position[0], col = position[1];
+        currentButtonsImages[row][col] = userMonsters[selectedMonster];
+        boardSquares[row][col].setIcon(scaleImage(userMonsters[selectedMonster], buttonWidth, buttonHeight));
+        if (selectedMonster != 12) selectionUI.decrementMonster(selectedMonster);
+        if(selectedMonster != 12) removeBorders();
+    }
+
+    public void clearBorders() {
+        removeBorders();
+    }
+
+    public void clear(int[] position, int monster) {
+        int row = position[0], col = position[1];
+        currentButtonsImages[row][col] = null;
+        boardSquares[row][col].setIcon(null);
+        selectionUI.increment(monster);
+        removeBorders();
+    }
+
+    public void opponentExited() {
+        endGameUI.opponentExited();
+        this.repaint();
+        this.setVisible(true);
     }
 
     // Για scaling.
@@ -438,8 +560,8 @@ public class View extends JFrame implements ViewInterface {
         // Μεγέθυνε τα κουμπιά αναλογικά με το μέγεθος του παραθύρου.
         private void resizePanels(){
             int width = getWidth() * 2/3;
-            int height = getHeight() - 35;
-
+            int height = getHeight(); //- 35;
+// TODO: Uncomment -35 if necessary.
             squares.setPreferredSize(new Dimension(width, height));
             roundPanel.setPreferredSize(new Dimension(getWidth() / 3, height));
 

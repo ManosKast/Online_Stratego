@@ -13,12 +13,14 @@ import java.util.List;
 import java.util.Random;
 
 class Board {
-    private static GameCharacters[][] piecesOnBoard;
-    private static int firstPlayersTotalAttacks;
-    private static int firstPlayersSuccessfulAttacks;
-    private static int secondPlayersTotalAttacks;
-    private static int secondPlayersSuccessfulAttacks;
+    private final GameCharacters[][] piecesOnBoard;
+    private int firstPlayersTotalAttacks;
+    private int firstPlayersSuccessfulAttacks;
+    private int secondPlayersTotalAttacks;
+    private int secondPlayersSuccessfulAttacks;
     private final int gameMode; // Συγκρατεί το mode του παιχνιδιού.
+    int[] total = new int[12];
+    int[][] check = new int[2][12]; // TODO: Maybe remove.
 
     Board(int mode) {
         piecesOnBoard = new GameCharacters[8][10];
@@ -30,60 +32,59 @@ class Board {
         secondPlayersTotalAttacks = 0;
         secondPlayersSuccessfulAttacks = 0;
 
-        this.randomBoardSetup();
+        referenceMonsters();
     }
 
-    // Στήνω το ταμπλό για την εκκίνηση του παιχνιδιού. Τυχαία κατανομή.
-    void randomBoardSetup() {
+    // Based on the game mode, it sets the total number of monsters each player controls.
+    private void referenceMonsters() {
         boolean regularArmy = ((gameMode != 2) && (gameMode != 3));
 
         // Κάθε στήλη υποδεικνύει το πλήθος του κάθε τέρατος που επιτρέπεται.
-        int[] total = (regularArmy) ? new int[]{1, 6, 1, 4, 5, 2, 2, 2, 3, 2, 1, 1} :
-                new int[]{1, 3, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1};
+        total = (regularArmy) ? new int[]{1, 1, 4, 5, 2, 2, 2, 3, 2, 1, 1, 6} :
+                new int[]{1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 3};
 
-        int[] check = (regularArmy) ? new int[]{1, 6, 1, 4, 5, 2, 2, 2, 3, 2, 1, 1} :
-                new int[]{1, 3, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1};
+        check[0] = Arrays.copyOf(total, total.length);
+        check[1] = Arrays.copyOf(total, total.length);
+    }
 
-        int endRow = (regularArmy) ? 3 : 2;
-        int startLine = (regularArmy) ? 0 : 1;
-        int endLine = (regularArmy) ? 10 : 9;
 
+    // Στήνω το ταμπλό για την εκκίνηση του παιχνιδιού. Τυχαία κατανομή.
+    public List<Integer> randomBoardSetup(int ID) {
+        ArrayList<Integer> monsters = new ArrayList<>();
+        int startingRow, endingRow, startingCol, endingCol;
+
+        if (gameMode == 0 || gameMode == 1) {
+            startingRow = (ID == 1) ? 0 : 5;
+            endingRow = (ID == 1) ? 3 : 8;
+            startingCol = 0;
+            endingCol = 10;
+        } else {
+            startingRow = (ID == 1) ? 0 : 6;
+            endingRow = (ID == 1) ? 2 : 8;
+            startingCol = 1;
+            endingCol = 9;
+        }
         Random rand = new Random();
-        Random otherRand = new Random();
         int randomMonster;
 
-        for (int i = 0; i < endRow; ++i) {
-            for (int j = startLine; j < endLine; ++j) {
-
-                // Επαναλαμβάνεται, ώσπου να επιλεχτεί τέρας που μπορεί να τοποθετηθεί στο ταμπλό.
-                do {
-                    randomMonster = otherRand.nextInt(12);
-                } while (check[randomMonster] == 0);
-
-                // Τοποθετήθηκε το συγκεκριμένο τέρας, συνεπώς μειώνω το πλήθος.
-                --check[randomMonster];
-                this.addMonsterOnBoard(i, j, randomMonster, 1);
+        for (int i = startingRow; i < endingRow; ++i) {
+            for (int j = startingCol; j < endingCol; ++j) {
+                if (piecesOnBoard[i][j] == null) {
+                    // Επαναλαμβάνεται, ώσπου να επιλεχτεί τέρας που μπορεί να τοποθετηθεί στο ταμπλό.
+                    monsters.add(i);
+                    monsters.add(j);
+                    do {
+                        randomMonster = rand.nextInt(12);
+                    } while (check[ID - 1][randomMonster] == 0);
+                    monsters.add(randomMonster);
+                    // Τοποθετήθηκε το συγκεκριμένο τέρας, συνεπώς μειώνω το πλήθος.
+                    --check[ID - 1][randomMonster];
+                    this.addMonsterOnBoard(i, j, randomMonster, ID);
+                }
             }
         }
 
-        endRow = (regularArmy) ? 5 : 6;
-        startLine = (regularArmy) ? 0 : 1;
-        endLine = (regularArmy) ? 10 : 9;
-
-        // Όμοιος βρόχος με τον πάνω. Στήνει τα τέρατα του δεύτερου παίκτη.
-        for (int i = endRow; i < 8; ++i) {
-            for (int j = startLine; j < endLine; ++j) {
-                randomMonster = otherRand.nextInt(12);
-
-                while (total[randomMonster] == 0)
-                    randomMonster = rand.nextInt(12);
-
-                --total[randomMonster];
-                this.addMonsterOnBoard(i, j, randomMonster, 2);
-            }
-        }
-
-        this.addForbiddenZones();
+        return monsters;
     }
 
     // Μόλις πραγματοποιηθεί το τυχαίο setup να χρησιμοποιείται αυτό για να ανανεώνεται η λίστα
@@ -119,22 +120,22 @@ class Board {
     private void addMonsterOnBoard(int line, int row, int monster, int player) {
         switch (monster) {
             case 0 -> piecesOnBoard[line][row] = new Flag(row, line, player);
-            case 1 -> piecesOnBoard[line][row] = new Trap(row, line, player);
-            case 2 -> piecesOnBoard[line][row] = new Slayer(row, line, player);
-            case 3 -> piecesOnBoard[line][row] = new Scout(row, line, player);
-            case 4 -> piecesOnBoard[line][row] = new Dwarf(row, line, player);
-            case 5 -> piecesOnBoard[line][row] = new Elf(row, line, player);
-            case 6 -> {
+            case 1 -> piecesOnBoard[line][row] = new Slayer(row, line, player);
+            case 2 -> piecesOnBoard[line][row] = new Scout(row, line, player);
+            case 3 -> piecesOnBoard[line][row] = new Dwarf(row, line, player);
+            case 4 -> piecesOnBoard[line][row] = new Elf(row, line, player);
+            case 5 -> {
                 if (player == 1)
                     piecesOnBoard[line][row] = new Yeti(row, line, player);
                 else
                     piecesOnBoard[line][row] = new LavaBeast(row, line, player);
             }
-            case 7 -> piecesOnBoard[line][row] = new Sorceress(row, line, player);
-            case 8 -> piecesOnBoard[line][row] = new BeastRider(row, line, player);
-            case 9 -> piecesOnBoard[line][row] = new Knight(row, line, player);
-            case 10 -> piecesOnBoard[line][row] = new Mage(row, line, player);
-            case 11 -> piecesOnBoard[line][row] = new Dragon(row, line, player);
+            case 6 -> piecesOnBoard[line][row] = new Sorceress(row, line, player);
+            case 7 -> piecesOnBoard[line][row] = new BeastRider(row, line, player);
+            case 8 -> piecesOnBoard[line][row] = new Knight(row, line, player);
+            case 9 -> piecesOnBoard[line][row] = new Mage(row, line, player);
+            case 10 -> piecesOnBoard[line][row] = new Dragon(row, line, player);
+            case 11 -> piecesOnBoard[line][row] = new Trap(row, line, player);
         }
     }
 
@@ -150,6 +151,35 @@ class Board {
         piecesOnBoard[4][7] = new ForbiddenZone(4, 7, -1);
     }
 
+    public boolean canDeployMonster(int monster, int player) {
+        return check[player-1][monster] > 0;
+    }
+
+    public boolean canPositionMonster(int row, int col, int player, int monster) {
+        // TODO: Add descriptive methods.
+        if (isOutOfBounds(row, col) || player < 1 || player > 2 || monster < 0 || monster > 11)
+            return false;
+        int startingRow, endingRow, startingCol, endingCol;
+        if (gameMode == 0 || gameMode == 1) {
+            startingRow = (player == 1) ? 0 : 5;
+            endingRow = (player == 1) ? 3 : 8;
+            startingCol = 0;
+            endingCol = 10;
+        } else {
+            startingRow = (player == 1) ? 0 : 6;
+            endingRow = (player == 1) ? 2 : 8;
+            startingCol = 1;
+            endingCol = 9;
+        }
+
+        boolean legalPosition = (row >= startingRow && row < endingRow) && (col >= startingCol && col < endingCol);
+        if (legalPosition && piecesOnBoard[row][col] == null && check[player-1][monster] > 0) {
+            addMonsterOnBoard(row, col, monster, player);
+            --check[player-1][monster];
+            return true;
+        }
+        return false;
+    }
     public String toString() {
         StringBuilder print = new StringBuilder();
 
@@ -220,6 +250,36 @@ class Board {
                 this.isEnemy(nextLine, nextRow, playersID));
     }
 
+    // TODO: Simplified version. Check it out.
+    /*
+    boolean canMove(int currentLine, int nextLine, int currentRow, int nextRow, int playersID) {
+    if (isOutOfBounds(currentLine, currentRow) || isOutOfBounds(nextLine, nextRow) || playersID < 1 || playersID > 2)
+        return false;
+
+    GameCharacters movingMonster = piecesOnBoard[currentLine][currentRow];
+    if (movingMonster == null || movingMonster instanceof ForbiddenZone)
+        return false;
+
+    int moveHorizontally = Math.abs(currentLine - nextLine);
+    int moveVertically = Math.abs(currentRow - nextRow);
+
+    boolean move = false;
+    if (movingMonster instanceof Flag || movingMonster instanceof Trap) {
+        move = false;
+    } else if (movingMonster instanceof Scout) {
+        move = canScoutMove(currentLine, nextLine, currentRow, nextRow, playersID);
+    } else {
+        move = ((moveHorizontally == 1) && (moveVertically == 0)) || ((moveHorizontally == 0) && (moveVertically == 1));
+        if (gameMode == 1 || gameMode == 3) {
+            move = playersID == 1 ? move : move && (nextLine - currentLine) >= 0;
+        }
+    }
+
+    return move && (piecesOnBoard[nextLine][nextRow] == null || isEnemy(nextLine, nextRow, playersID));
+}
+     */
+
+    // TODO: isEnemy with argument a GameCharacter instead.
     // Επιστρέφει true εάν το τέρας είναι του αντιπάλου.
     boolean isEnemy(int line, int row, int playersID) {
         if (this.isOutOfBounds(line, row) || piecesOnBoard[line][row] == null ||
@@ -533,6 +593,7 @@ class Board {
 
             totalMonsters = monsters.size();
 
+            // TODO: Maybe add queue or stack, instead of removing index. Faster and simpler.
             for (int i = startingLine; i < endingLine; ++i) {
                 for (int j = startingRow; j < endingRow; ++j) {
                     index = randomNumber.nextInt(totalMonsters);
@@ -591,5 +652,43 @@ class Board {
     public static void main(String[] args){
         Board myBoard = new Board(1);
         System.out.println(myBoard);
+    }
+
+    public int clearPosition(int[] position, int ID) {
+        if(isOutOfBounds(position[0], position[1]) || piecesOnBoard[position[0]][position[1]] == null)
+            return -1;
+
+        int row = position[0];
+        int col = position[1];
+        int monster = -1;
+
+        if (piecesOnBoard[row][col] != null && piecesOnBoard[row][col].getPlayersID() == ID) {
+            monster = piecesOnBoard[row][col].getPower();
+            if (monster == Integer.MAX_VALUE) monster = 11;
+            piecesOnBoard[row][col] = null;
+            ++check[ID-1][monster];
+        }
+        return monster;
+    }
+
+    public boolean isReady(int ID) {
+        int startingLine, endingLine, startingRow, endingRow;
+        if (gameMode == 0 || gameMode == 1) {
+            startingLine = (ID == 1) ? 0 : 5;
+            endingLine = (ID == 1) ? 3 : 8;
+            startingRow = 0;
+            endingRow = 10;
+        } else {
+            startingLine = (ID == 1) ? 0 : 6;
+            endingLine = (ID == 1) ? 2 : 8;
+            startingRow = 1;
+            endingRow = 9;
+        }
+
+        for (int i = startingLine; i < endingLine; ++i)
+            for (int j = startingRow; j < endingRow; ++j)
+                if (piecesOnBoard[i][j] == null) return false;
+
+        return true;
     }
 }

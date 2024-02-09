@@ -21,14 +21,13 @@ public class Packet {
     private boolean nameSet;    // If playerID has been set.
     private String data;        // Packet's data.
 
-    static private Gson gson = new Gson(); // Serialiser. I might remove it, not sure.
+    static private final Gson gson = new Gson(); // Serialiser. I might remove it, not sure.
 
     public Packet(){playerID = ""; protocol = (byte) -1; approved = false; data = ""; nameSet = false;}
 
-    public void setPlayerID(Packet packet){
+    public void setPlayerID(String player){
         if (!nameSet) {
-            playerID = (String) packet.extractData(String.class);
-            System.out.println("Player ID set to: " + playerID);
+            playerID = player;
             nameSet = true;
         }
     }
@@ -66,7 +65,7 @@ public class Packet {
     public String getID() {return playerID;}
     public byte getFlag() {return flag;}
     public boolean approved() {return approved;}
-    public <T> T extractData(Class<?> type){return (T) gson.fromJson(data, type);}
+    public <T> T extractData(Class<T> type){return gson.fromJson(data, type);}
     public <T> T extractData(Type type){
         return gson.fromJson(data, type);
     }

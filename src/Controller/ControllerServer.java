@@ -21,6 +21,7 @@ public class ControllerServer {
     private String serverID = "Server";
     static Hashtable<String, Game> games = new Hashtable<>();
     static LinkedList<Client> queued_players = new LinkedList<>();
+    static LinkedList<Client> clientEndGame = new LinkedList<>();
 
     public static void main(String[] args) throws IOException {
         int portNumber = 1234; // Example port number
@@ -32,6 +33,7 @@ public class ControllerServer {
                 Socket clientSocket = serverSocket.accept(); // Accept new client
                 System.out.println("Accepted new client " + clientSocket.getRemoteSocketAddress());
                 // TODO: Create method to generate random ID based on IP.
+                // TODO: Create a thread that checks if there are enough clients to create a game.
                 queued_players.add(new Client(clientSocket, "Player" + queued_players.size())); // Add client to queue
                 // Create and start a new thread for the client
                 new ClientHandler(clientSocket).start();
@@ -54,6 +56,7 @@ public class ControllerServer {
         // TODO: Server should return its ID, so clients can check if they are connected to the same server.
         // TODO: Add source and destination (names) in packet.
         // TODO: Only one thread can access the game at a time.
+        // TODO: Add exception for not locating game.
         public void run() {
             try {
                 String header = "";
@@ -62,14 +65,16 @@ public class ControllerServer {
                 BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                 String inputLine;
                 while ((inputLine = in.readLine()) != null) {
-                    //System.out.println("Received from client: " + inputLine);
                     Packet query = Packet.convertMessageToPacket(inputLine);
-                    //System.out.println("Protocol: " + query.getProtocol());
+                    System.out.println(inputLine);
                     header = inputLine;
+                    Game game;
                     switch (query.getProtocol()){
                         case Protocol.FIND_MATCH:
-                            if (!query.hasName()) response = queued_players.getLast().getID();
-                            header = query.generatePacket(Protocol.WELCOME, true, response);
+                            String[] data = new String[2];
+                            data[0] = Integer.toString((queued_players.size() % 2 + 1));
+                            if (!query.hasName()) data[1] = queued_players.getLast().getID();
+                            header = query.generatePacket(Protocol.WELCOME, true, data);
                             out.println(header);
 
                             if(queued_players.size() % 2 == 0) {
@@ -94,18 +99,61 @@ public class ControllerServer {
 
                         case Protocol.MOVE:
                             System.out.println(query.getID());
-                            Game game = games.get(query.getID());
+                            game = games.get(query.getID());
                             if (game != null) {
                                 int[] nextPosition = query.extractData(int[].class);
                                 game.moveMonster(nextPosition[0], nextPosition[1], query.getID());
                             } else System.out.println("Game not found");
+                            break;
 
                         case Protocol.SELECT:
-                            Game game1 = games.get(query.getID());
-                            if (game1 != null) {
+                            game = games.get(query.getID());
+                            if (game != null) {
                                 int[] nextPosition = query.extractData(int[].class);
-                                response = game1.selectMonster(nextPosition[0], nextPosition[1], query.getID());
+                                response = game.selectMonster(nextPosition[0], nextPosition[1], query.getID());
                                 out.println(response);
+                            } else System.out.println("Game not found");
+                            break;
+
+                        case Protocol.REVIVE:
+                            game = games.get(query.getID());
+                            byte flag = query.getFlag();
+                            if (flag == Flag.REVIVE_MONSTER) {
+                                int monster = query.extractData(int.class);
+                                game.canReviveMonster(query.getID(), monster);
+                            } else if (flag == Flag.REVIVE_POSITION){
+                                int[] position = query.extractData(int[].class);
+                                game.reviveMonster(query.getID(), position);
+                            }
+                            break;
+
+                        case Protocol.REPLAY:
+                            game = games.get(query.getID());
+                            game.replay(query.getID());
+
+                            if (game.canRestart() == -1)
+                                queued_players.add(game.getClient(query.getID()));
+                            if (game.isOver() && game.canRestart() == 1)
+                                game.restartGame();
+                            break;
+
+                        case Protocol.EXIT:
+                            Client client;
+                            game = games.remove(query.getID());
+                            client = game.exit(query.getID());
+
+                            // If player was inserted in queue, remove him.
+                            queued_players.remove(client);
+                            // TODO: Handle exiting.
+                            // TODO: Merge exit and replay into protocol GAME_OVER.
+                            // If the other player has not exited yet, add him to match queue.
+                            if (client != null && client.restart()) queued_players.add(client);
+                            break;
+
+                        case Protocol.BOARD_SETUP:
+                            game = games.get(query.getID());
+                            if (game != null) {
+                               handleBoardSetUpFlags(game, query);
                             } else System.out.println("Game not found");
                             break;
                     }
@@ -121,5 +169,35 @@ public class ControllerServer {
                 System.out.println(e.getMessage());
             }
         }
+
+        private void handleBoardSetUpFlags(Game game, Packet query) {
+            byte flag = query.getFlag();
+            switch(flag) {
+                case Flag.SELECT_MONSTER -> {
+                    int monster = query.extractData(int.class);
+                    game.isAvailableMonster(query.getID(), monster);
+                }
+
+                case Flag.POSITION_MONSTER -> {
+                    int[] position = query.extractData(int[].class);
+                    game.positionMonster(query.getID(), position);
+                }
+
+                case Flag.CLEAR_POSITION -> {
+                    int[] position = query.extractData(int[].class);
+                    game.clearPosition(query.getID(), position);
+                }
+
+                case Flag.RANDOMISE_BOARD -> {
+                    game.randomiseBoard(query.getID());
+                }
+
+                case Flag.FINALISE_BOARD -> {
+                    game.finaliseBoard(query.getID());
+                }
+            }
+        }
+
     }
+
 }

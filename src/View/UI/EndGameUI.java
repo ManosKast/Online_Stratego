@@ -12,22 +12,24 @@ public class EndGameUI extends JPanel {
     JLabel playerWins;
     JPanel options;
     JButton[] option = new JButton[2];
+    String outcome;
 
-    public EndGameUI(int width, int height, int ID, MouseListener handler){
+    public EndGameUI(int width, int height, String ID, MouseListener handler){
         this.setSize(width, height);
         this.setBackground(Color.BLACK);
         this.setLayout(new BorderLayout());
+        this.outcome = ID;
 
-        this.initialisePanels(ID, handler);
+        this.initialisePanels(handler);
 
         this.setVisible(true);
         this.addComponentListener(new Resize());
     }
 
-    private void initialisePanels(int ID, MouseListener handler){
+    private void initialisePanels(MouseListener handler){
         JButton button;
 
-        playerWins = new JLabel("Player" + ID + " Wins");
+        playerWins = new JLabel(outcome);
         playerWins.setOpaque(true);
         playerWins.setBackground(Color.BLACK);
         playerWins.setForeground(Color.WHITE);
@@ -83,6 +85,11 @@ public class EndGameUI extends JPanel {
     public void disableUI(){
         this.setVisible(false);
         this.setEnabled(false);
+    }
+
+    public void opponentExited() {
+        playerWins.setText("<html><center>" + playerWins.getText() + "<br>Opponent exited the game</center></html>");        playerWins.setHorizontalAlignment(SwingConstants.CENTER);
+        option[0].setText("New Game");
     }
 
     // Αλλάζει χρώμα στο mode που το mouse περιφέρεται κάποια στιγμή.

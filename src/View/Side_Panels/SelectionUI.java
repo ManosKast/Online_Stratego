@@ -4,14 +4,14 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 
-public class SelectionUI extends JWindow {
+import static Util.Util.scaleImage;
 
-    public static void main(String[] args) {
-        new SelectionUI(800,600, 1, new HoverMouse());
-    }
-    private MouseListener hover = new HoverMouse();
+public class SelectionUI extends JPanel {
+
+    private final MouseListener listener;
     private JButton[][] boardSquares = new JButton[3][4];
     private JLabel top = new JLabel("Captures");
     private JPanel capturedPanel = new JPanel();
@@ -23,121 +23,105 @@ public class SelectionUI extends JWindow {
     private final int[] initialMonsters; // Υπάρχει κυρίως για το scaling.
     private final int[] captives = new int[12];
     private int ID;
-    private final ArrayList<Image> firstPlayersCaptives;
-    private final ArrayList<Image> secondPlayersCaptives;
+    private JButton randomise;
+    private JButton confirm;
+    private JPanel buttons;
+    private JPanel monstersPanel;
+    private JPanel[][] panels = new JPanel[3][4];
+    private JLabel[][] labels = new JLabel[3][4];
+    private BufferedImage[] monsters;
 
-    public SelectionUI(int width, int height,  int gameMode, MouseListener mouseHandler){
-        this.initialMonsters = ((gameMode != 2) && (gameMode != 3)) ? new int[]{1, 6, 1, 4, 5, 2, 2, 2, 3, 2, 1, 1} :
-                new int[]{1, 3, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1};
+    public SelectionUI(int width, int height, int gameMode, MouseListener mouseHandler, BufferedImage[] monsters){
+        setPreferredSize(new Dimension(width, height));
+        setLayout(new BorderLayout());
+        this.initialMonsters = ((gameMode != 2) && (gameMode != 3)) ? new int[]{1, 1, 4, 5, 2, 2, 2, 3, 2, 1, 1, 6} :
+                new int[]{1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 3};
 
-        this.firstPlayersCaptives = new ArrayList<>();
-        this.secondPlayersCaptives = new ArrayList<>();
+        this.monsters = monsters;
 
         // Το Resize του View, επικαλείται πάντα στην αρχή.
         // Εφόσον δε δημιούργησα μέθοδο αρχικοποίησης των πάνελς
         // και επικαλούμαι τα nextRound.
         this.ID = -1;
-        this.hover = mouseHandler;
+        this.listener = mouseHandler;
 
         this.setSize(new Dimension(width, height));
         this.setLayout(new BorderLayout());
 
-        this.getPictures();
-        this.initialiseBoard(hover);
+        // TODO: Make it field and scale everything.
+        JLabel top = new JLabel("Set-up board");
+        top.setFont(new Font("Verdana", Font.BOLD + Font.ITALIC, height/20));
+        top.setHorizontalAlignment(SwingConstants.CENTER);
+        this.add(top, BorderLayout.NORTH);
+
+        this.setUpButtons();
+
+        this.initialiseBoard();
         this.setVisible(true);
     }
 
-    private void setUpBottomHalf(){
-        JPanel bottomHalf = new JPanel();
-        bottomHalf.setLayout(new BorderLayout());
-        bottomHalf.setPreferredSize(new Dimension(this.getWidth(), this.getHeight()));
+    // TODO: Maybe add different colors on buttons.
+    private void setUpButtons() {
+        this.randomise = new JButton("Randomise");
+        this.randomise.setName("randomise");
+        this.randomise.setBackground(Color.RED);
+        this.randomise.setFocusPainted(false);
+        this.randomise.addMouseListener(listener);
 
-        setUpLabels();
+        this.confirm = new JButton("Confirm");
+        this.confirm.setName("finalise");
+        this.confirm.setBackground(Color.GREEN);
+        this.confirm.setFocusPainted(false);
+        this.confirm.addMouseListener(listener);
 
-        this.capturedPanel.setBackground(Color.GRAY);
-        this.addCaptiveMonsters();
+        this.buttons = new JPanel();
+        this.buttons.setLayout(new GridLayout(1, 2));
 
-        bottomHalf.add(this.top, BorderLayout.NORTH);
-        bottomHalf.add(this.capturedPanel, BorderLayout.CENTER);
+        this.buttons.add(this.randomise);
+        this.buttons.add(this.confirm);
 
-        this.add(bottomHalf);
-    }
-
-    private void setUpLabels(){
-        this.top = new JLabel("Captures");
-
-        this.top.setHorizontalAlignment(SwingConstants.CENTER);
-
-        this.capturedPanel = new JPanel();
-        this.capturedPanel.setLayout(new BorderLayout());
-
-        this.bottom = new JLabel("Captured: 0");
-        this.bottom.setForeground(Color.WHITE);
-
-        this.images = new JPanel();
-        this.images.setLayout(new GridLayout(4, 3));
-        this.images.setBackground(Color.GRAY);
-        this.scaleCapturedPanel();
-        this.setUpImages();
-        this.initialiseBoard(hover);
+        this.add(this.buttons, BorderLayout.SOUTH);
     }
 
 
-    private void setUpImages(){
-        for(int i = 0; i < 4; ++i){
-            for(int j = 0; j < 3; ++j){
-                monstersPictures[i][j] = new JLabel("", null, JLabel.LEADING);
-                images.add(monstersPictures[i][j]);
-            }
-        }
 
-        this.getPictures();
-    }
+    private void initialiseBoard(){
+        monstersPanel = new JPanel();
+        monstersPanel.setLayout(new GridLayout(3, 4));
 
-    private void addCaptiveMonsters(){
-        this.picturesWidth = this.getWidth();
-        this.picturesHeight = this.getHeight();
-
-        this.capturedPanel.add(images, BorderLayout.CENTER);
-        this.capturedPanel.add(bottom, BorderLayout.SOUTH);
-        this.add(this.capturedPanel);
-    }
-
-    public void nextRound(int[] referenceToMonsters){
-        this.ID = (this. ID == 1) ? 2 : 1;
-        this.getTotalOfCaptives(referenceToMonsters);
-        this.getCaptiveMonsters();
-    }
-
-    private void initialiseBoard(MouseListener buttonHandler){
         JButton newButton;
 
         int height = this.getHeight();
         int width = this.getWidth();
 
-        GridLayout layout = new GridLayout(3, 4);
-        this.setLayout(layout);
 
         for(int i = 0; i < 3; ++i){
             for(int j = 0; j < 4; ++j){
                 boardSquares[i][j] = new JButton();
                 newButton = boardSquares[i][j];
 
+                // TODO: Simplify this.
                 JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+                panels[i][j] = panel;
                 newButton.setName("" + (j + 4*i));
-                newButton.addMouseListener(buttonHandler);
-                newButton.setRolloverEnabled(false);
-                newButton.setIcon(new ImageIcon(firstPlayersCaptives.get(j + 4*i).getScaledInstance(width/5, height/4, Image.SCALE_SMOOTH)));
-                JLabel label = new JLabel("5");
-                Font font = new Font("Verdana", Font.BOLD + Font.ITALIC, 20);
+                newButton.addMouseListener(listener);
+                newButton.setIcon(scaleImage(monsters[j + 4*i], width/6, height/5));
+                JLabel label = new JLabel("Total: " + initialMonsters[j + 4*i]);
+                Font font = new Font("Verdana", Font.BOLD + Font.ITALIC, height/40);
                 label.setFont(font);
+                labels[i][j] = label;
                 panel.add(label);
                 panel.add(newButton);
-                this.add(panel);
+                monstersPanel.add(panel);
             }
         }
+
+        this.add(monstersPanel, BorderLayout.CENTER);
     }
 
+    private void setRemainingMonsters() {
+
+    }
     private void getCaptiveMonsters(){
         int monster = 0;
         int size = this.getHeight() / 23;
@@ -148,14 +132,11 @@ public class SelectionUI extends JWindow {
 
         Font font = new Font("Verdana", Font.BOLD + Font.ITALIC, size);
 
-        ArrayList<Image> images = (this.ID == 1) ? secondPlayersCaptives : firstPlayersCaptives;
-
         for(int i = 0; i < 4; ++i){
             for(int j = 0; j < 3; ++j){
                 monstersPictures[i][j].setFont(font);
                 monstersPictures[i][j].setText(Integer.toString(captives[monster]));
-                monstersPictures[i][j].setIcon(new ImageIcon(images.get(monster).getScaledInstance(width,
-                        height, Image.SCALE_SMOOTH)));
+                monstersPictures[i][j].setIcon(scaleImage(monsters[monster], width, height));
                 ++monster;
             }
         }
@@ -181,45 +162,6 @@ public class SelectionUI extends JWindow {
         this.bottom.setText("Captured: " + sum);
     }
 
-    // Προσθέτει τις εικόνες των τεράτων που έκαστος παίκτης μπορεί να αιχμαλωτίσει.
-    private void getPictures(){
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/flagB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/flagR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/trapB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/trapR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/slayerB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/slayerR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/scoutB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/scoutR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/dwarfB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/dwarfR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/elfB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/elfR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/yeti.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/lavaBeast.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/sorceressB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/sorceressR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/beastRiderB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/beastRiderR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/knightB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/knightR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/mageB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/mageR.png").getImage());
-
-        this.firstPlayersCaptives.add(new ImageIcon("src/images/bluePieces/dragonB.png").getImage());
-        this.secondPlayersCaptives.add(new ImageIcon("src/images/RedPieces/dragonR.png").getImage());
-    }
 
     public void scalePanel(int width, int height){
         if(this.ID == -1){
@@ -245,6 +187,22 @@ public class SelectionUI extends JWindow {
         this.bottom.setFont(new Font("Verdana", Font.BOLD + Font.ITALIC, size));
     }
 
+    public void decrementMonster(int selectedMonster) {
+        --this.initialMonsters[selectedMonster];
+        int row = selectedMonster / 4;
+        int col = selectedMonster % 4;
+
+        this.labels[row][col].setText("Total: " + this.initialMonsters[selectedMonster]);
+    }
+
+    public void increment(int monster) {
+        ++initialMonsters[monster];
+        int row = monster / 4;
+        int col = monster % 4;
+
+        labels[row][col].setText("Total: " + initialMonsters[monster]);
+    }
+
     // Αλλάζει χρώμα στο mode που το mouse περιφέρεται κάποια στιγμή.
     private static class HoverMouse implements MouseListener {
 
@@ -253,31 +211,19 @@ public class SelectionUI extends JWindow {
         public void mouseClicked(MouseEvent e) {
             JButton button = (JButton) e.getSource();
 
-            System.out.println("BOOM");
+            System.out.println("Button " + button.getName() + " was clicked.");
         }
 
         @Override
-        public void mousePressed(MouseEvent e) {
-
-        }
-
+        public void mousePressed(MouseEvent e) {}
         @Override
-        public void mouseReleased(MouseEvent e) {
-
-        }
-
+        public void mouseReleased(MouseEvent e) {}
         @Override
-        public void mouseEntered(MouseEvent e) {
-            JButton hover = (JButton) e.getSource();
-
-            hover.setForeground(Color.RED);
-        }
-
+        public void mouseEntered(MouseEvent e) {}
         @Override
-        public void mouseExited(MouseEvent e) {
-            JButton hover = (JButton) e.getSource();
-
-            hover.setForeground(Color.WHITE);
-        }
+        public void mouseExited(MouseEvent e) {}
     }
+
+    // TODO: Resize
+    // TODO: Hover mouse red borders indicating cell clearance, during deployment phase.
 }

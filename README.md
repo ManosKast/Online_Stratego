@@ -2,6 +2,8 @@ TODO:
 
 Fix Endgame and rematch
 
+Board elements should be accessed solely by Player class
+
 Add timers
 
 Remove static modifiers from player and board classes

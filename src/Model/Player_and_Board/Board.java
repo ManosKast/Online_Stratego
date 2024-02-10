@@ -33,6 +33,7 @@ class Board {
         secondPlayersSuccessfulAttacks = 0;
 
         referenceMonsters();
+        addForbiddenZones();
     }
 
     // Based on the game mode, it sets the total number of monsters each player controls.

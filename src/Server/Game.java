@@ -182,26 +182,7 @@ public class Game {
 
         winner = attacker.moveCharacter(positionBuffer[0], nextRow, positionBuffer[1], nextCol, defender);
 
-        // Αν τελείωσε το παιχνίδι.
-        // TODO: Maybe get it smoother. Change flags and protocols to include everything in one packet and view the battle.
-        // TODO: Add checks to see who won.
-        if (!gameContinues()) {
-            if (winner != null) {
-                packet1 = packet.generatePacket(Protocol.GAME_OVER, Flag.WON, true, 0);
-                packet2 = packet.generatePacket(Protocol.GAME_OVER, Flag.LOST, true, 0);
-            }
-            else {
-                packet1 = packet.generatePacket(Protocol.GAME_OVER, Flag.LOST, true, 0);
-                packet2 = packet.generatePacket(Protocol.GAME_OVER, Flag.WON, true, 0);
-            }
-
-            gameOver = true;
-            executor.submit(new SendMessage(attackerOut, packet1));
-            executor.submit(new SendMessage(defenderOut, packet2));
-            return;
-        }
-
-        if(battle){
+        if(battle) {
             // Collect statistics.
             int[] attackerData = new int[moveTo.length + 1];
             System.arraycopy(moveTo, 0, attackerData, 0, moveTo.length);
@@ -226,6 +207,24 @@ public class Game {
 
         executor.submit(new SendMessage(attackerOut, packet1));
         executor.submit(new SendMessage(defenderOut, packet2));
+
+        // Αν τελείωσε το παιχνίδι.
+        // TODO: Maybe get it smoother. Change flags and protocols to include everything in one packet and view the battle.
+        // TODO: Add checks to see who won.
+        if (!gameContinues()) {
+            if (winner != null) {
+                packet1 = packet.generatePacket(Protocol.GAME_OVER, Flag.WON, true, 0);
+                packet2 = packet.generatePacket(Protocol.GAME_OVER, Flag.LOST, true, 0);
+            }
+            else {
+                packet1 = packet.generatePacket(Protocol.GAME_OVER, Flag.LOST, true, 0);
+                packet2 = packet.generatePacket(Protocol.GAME_OVER, Flag.WON, true, 0);
+            }
+
+            gameOver = true;
+            executor.submit(new SendMessage(attackerOut, packet1));
+            executor.submit(new SendMessage(defenderOut, packet2));
+        }
 
         if (attacker.canRevive(winner, defender)) {
             int[] capturedMonsters = attacker.getCapturedMonsters();
@@ -395,6 +394,8 @@ public class Game {
         opponentOut.println(packet1);
         if (player1.getID().equals(id)) player1.restartGame();
         else player2.restartGame();
+
+        if(player1.restart() && player2.restart()) restartGame();
     }
 
     public Client exit(String id) {

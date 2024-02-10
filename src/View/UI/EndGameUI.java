@@ -88,8 +88,18 @@ public class EndGameUI extends JPanel {
     }
 
     public void opponentExited() {
-        playerWins.setText("<html><center>" + playerWins.getText() + "<br>Opponent exited the game</center></html>");        playerWins.setHorizontalAlignment(SwingConstants.CENTER);
+        playerWins.setText("<html><center><br>Opponent exited the game</center></html>");
+        playerWins.setHorizontalAlignment(SwingConstants.CENTER);
         option[0].setText("New Game");
+        option[0].setName("new game");
+        option[0].setEnabled(true);
+        repaint();
+    }
+
+    public void opponentRematch() {
+        playerWins.setText("<html><center><br>Opponent wants a rematch</center></html>");
+        playerWins.setHorizontalAlignment(SwingConstants.CENTER);
+        repaint();
     }
 
     // Αλλάζει χρώμα στο mode που το mouse περιφέρεται κάποια στιγμή.

@@ -327,7 +327,6 @@ public class View extends JFrame implements ViewInterface {
     public void moveCharacter(int[] previousPosition, int[] nextPosition){
         int pRow = previousPosition[0], pColumn = previousPosition[1];
         int nRow = nextPosition[0], nColumn = nextPosition[1];
-        System.out.println(Arrays.toString(previousPosition) + "||" + Arrays.toString(nextPosition));
 
         currentButtonsImages[nRow][nColumn] = currentButtonsImages[pRow][pColumn];
         currentButtonsImages[pRow][pColumn] = null;
@@ -404,7 +403,6 @@ public class View extends JFrame implements ViewInterface {
         this.concealGame();
 
         endGameUI = new EndGameUI(this.getWidth(), this.getHeight(), outcome, handler);
-
         this.add(endGameUI, BorderLayout.CENTER);
         this.repaint();
         this.setVisible(true);
@@ -413,17 +411,20 @@ public class View extends JFrame implements ViewInterface {
     // TODO: Remove and modify signature in interface.
     public void restartGame(Player attacker, Player defender){}
 
+
     public void restartGame(int[][] board, byte flag) {
         endGameUI.disableUI();
+        this.remove(endGameUI);
 
         this.add(squares, BorderLayout.CENTER);
         this.add(roundPanel, BorderLayout.EAST);
 
-        squares.setEnabled(true);
-        squares.setVisible(true);
+        this.squares.setEnabled(true);
+        this.squares.setVisible(true);
 
-        roundPanel.setEnabled(true);
-        roundPanel.setVisible(true);
+        this.roundPanel.setEnabled(true);
+        this.roundPanel.setVisible(true);
+
 
         stats.restartGame(flag);
         monsters.restartGame();
@@ -431,15 +432,13 @@ public class View extends JFrame implements ViewInterface {
         emptyBoard();
         test(board);
 
+        revalidate();
         repaint();
-        setVisible(true);
     }
 
     //TODO: Change implementation's signature.
     @Override
-    public void endGame(Player attacker, MouseListener handler) {
-
-    }
+    public void endGame(Player attacker, MouseListener handler) {}
 
     // Αφαιρεί όλα τα στοιχεία απ΄το ταμπλό.
     private void emptyBoard(){
@@ -526,6 +525,12 @@ public class View extends JFrame implements ViewInterface {
 
     public void opponentExited() {
         endGameUI.opponentExited();
+        this.repaint();
+        this.setVisible(true);
+    }
+
+    public void opponentRematch() {
+        endGameUI.opponentRematch();
         this.repaint();
         this.setVisible(true);
     }

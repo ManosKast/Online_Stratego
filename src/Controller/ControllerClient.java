@@ -81,7 +81,7 @@ public class ControllerClient {
     private void search_game(){
         String address = "127.0.0.1";
         if (socket == null || socket.isClosed()) establishConnection(address);
-        message = packet.generatePacket(Protocol.FIND_MATCH, false, (Integer) gameMode);
+        message = packet.generatePacket(Protocol.FIND_MATCH, false, gameMode);
         out.println(message);
         // TODO: SEND message to server.
     }
@@ -115,7 +115,6 @@ public class ControllerClient {
     }
 
     private void isValidMovingPosition(int nextLine, int nextRow){
-        System.out.println("Next line: " + nextLine + " Next row: " + nextRow);
         message = packet.generatePacket(Protocol.MOVE, false, new int[]{nextLine, nextRow});
         out.println(message);
         // TODO: Send message to server. Server must hold monster player has chosen.
@@ -203,12 +202,14 @@ public class ControllerClient {
                         case Protocol.ENEMY_MOVE -> handleEnemyMoveFlag(server);
 
                         case Protocol.GAME_OVER -> {
-                            if(server.getFlag() == Flag.OPPONENT_EXITED) {
+                            if(server.getFlag() == Flag.OPPONENT_EXITED)
                                 view.opponentExited();
-                                continue;
+                            else if (server.getFlag() == Flag.OPPONENT_REMATCH)
+                                view.opponentRematch();
+                            else {
+                                String outcome = (server.getFlag() == Flag.WON) ? "You won" : "You lost";
+                                view.endGame(new RevivePanelPressed(), outcome);
                             }
-                            String outcome = (server.getFlag() == Flag.WON) ? "You won" : "You lost";
-                            view.endGame(new RevivePanelPressed(), outcome);
                         }
 
                         case Protocol.REPLAY -> {
@@ -245,10 +246,8 @@ public class ControllerClient {
                 view.nextRound();
             }
             else {
-                System.out.println(Arrays.toString(move));
                 int enemyMonster = move[2];
                 int ratio = move[3];
-                System.out.println("Ratio: " + ratio);
                 displayBattle(positionBuffer, move, enemyMonster);
                 switch (flag) {
                     case Flag.COMBAT_VICTORIOUS -> {
@@ -554,7 +553,11 @@ public class ControllerClient {
                     out.println(query);
                     System.exit(0);
                 }
-                case "replay" -> query = packet.generatePacket(Protocol.REPLAY, false, null);
+                case "replay" -> {
+                    query = packet.generatePacket(Protocol.REPLAY, false, null);
+                    button.setEnabled(false);
+                }
+                case "new game" -> query = packet.generatePacket(Protocol.FIND_MATCH, false, null);
                 default -> {
                     int monster = button.getName().charAt(0) - '0';
                     reviveMonster = monster - 1;

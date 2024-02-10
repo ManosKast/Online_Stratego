@@ -130,11 +130,6 @@ public class ControllerServer {
                         case Protocol.REPLAY:
                             game = games.get(query.getID());
                             game.replay(query.getID());
-
-                            if (game.canRestart() == -1)
-                                queued_players.add(game.getClient(query.getID()));
-                            if (game.isOver() && game.canRestart() == 1)
-                                game.restartGame();
                             break;
 
                         case Protocol.EXIT:

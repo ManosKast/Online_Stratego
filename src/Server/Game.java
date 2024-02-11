@@ -60,7 +60,7 @@ public class Game {
         // TODO: Πρόσθεσε μήνυμα και username στους Player. Πρόσθεσε τα στον constructor.
         // Δημιουργεί τους δύο παίκτες. Ξεκινάει πρώτος ο μπλε, αν δεν απατώμαι.
         this.attacker = new Player(gameMode, player1.getID());
-        this.defender = new Player(gameMode, player2.getID());
+        this.defender = new Player(gameMode, player2.getID(), attacker);
         this.invertedPlayer = attacker;
         System.out.println("Attacker: " + attacker.getID() + " Defender: " + defender.getID());
         positionBuffer[0] = -1;
@@ -299,18 +299,22 @@ public class Game {
     public void restartGame() {
         // Ξεκινάει πάντα ο μπλε.
         // Δεν αλλάζει το mode παιχνιδιού, το
-        if (attacker.getID() != 1)
-            nextRound();
+        //if (attacker.getID() != 1)
+        //    nextRound();
 
         player1.noOperation();
         player2.noOperation();
 
-        attacker.restartGame(defender);
+        attacker.clearBoard(defender);
+        // TODO: Flags are redundant, remove them.
         packet1 = getPlayersBoard(attacker.getPlayerID(), Flag.FIRST, Protocol.REPLAY);
         packet2 = getPlayersBoard(defender.getPlayerID(), Flag.SECOND, Protocol.REPLAY);
 
         executor.submit(new SendMessage(attackerOut, packet1));
         executor.submit(new SendMessage(defenderOut, packet2));
+
+        ready[0] = false;
+        ready[1] = false;
     }
 
     // Μετά την αναγέννηση, επανεμφανίζει το παιχνίδι, αλλάζει γύρο και καθιστά  false τη μεταβλητή revive.
@@ -335,7 +339,6 @@ public class Game {
     // If a player exited and the other player wants to continue, find him another game.
     public Client findClientGame() {
         return (player1.exited()) ? player2 : ((player2.exited()) ? player1 : null);
-
     }
 
     public void isAvailableMonster(String player, int monster) {
@@ -398,6 +401,7 @@ public class Game {
         if(player1.restart() && player2.restart()) restartGame();
     }
 
+    // TODO: Convert to void
     public Client exit(String id) {
         PrintWriter opponentOut = (attacker.getPlayerID().equals(id)) ? defenderOut : attackerOut;
         packet1 = packet.generatePacket(Protocol.GAME_OVER, Flag.OPPONENT_EXITED, true, 0);
@@ -482,7 +486,6 @@ public class Game {
             executor.submit(new SendMessage(defenderOut, packet2));
         }
         else {
-            ready[attacker.getID() - 1] = true;
             packet1 = packet.generatePacket(Protocol.BOARD_SETUP, Flag.WAITING_OPPONENT, true, 0);
             out.println(packet1);
         }

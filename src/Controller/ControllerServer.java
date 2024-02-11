@@ -1,6 +1,5 @@
 package Controller;
 
-import Model.Player_and_Board.Player;
 import Protocol.Protocol;
 import Protocol.Flag;
 import Packet.Packet;
@@ -18,10 +17,9 @@ import java.util.*;
 // TODO: Encipher IDs. Create Class Client that will contain client's details.
 // TODO: Create Class Game that will contain the game.
 public class ControllerServer {
-    private String serverID = "Server";
+    private final String serverID = "Server";
     static Hashtable<String, Game> games = new Hashtable<>();
     static LinkedList<Client> queued_players = new LinkedList<>();
-    static LinkedList<Client> clientEndGame = new LinkedList<>();
 
     public static void main(String[] args) throws IOException {
         int portNumber = 1234; // Example port number
@@ -76,25 +74,7 @@ public class ControllerServer {
                             if (!query.hasName()) data[1] = queued_players.getLast().getID();
                             header = query.generatePacket(Protocol.WELCOME, true, data);
                             out.println(header);
-
-                            if(queued_players.size() % 2 == 0) {
-                                header = query.generatePacket(Protocol.START_GAME, true, response);
-                                // TODO: Make this check with a new thread. Also, ID in Player must be ID returned
-                                // TODO: by server. Pair must contain socket and Player.
-                                // TODO: Alternatively hash table with 2 keys for player or socket.
-                                // TODO: Make Pair iterable. Make it prettier too. Add functions too,
-                                Client player2 = queued_players.remove(), player1 = queued_players.remove();
-                                Game newGame = new Game(0, player1, player2);
-                                System.out.println(player1.getID());
-                                games.put(player1.getID(), newGame);
-                                games.put(player2.getID(), newGame);
-                                PrintWriter out1 = new PrintWriter(player1.getSocket().getOutputStream(), true);
-                                PrintWriter out2 = new PrintWriter(player2.getSocket().getOutputStream(), true);
-                                String start1 = newGame.getPlayersBoard(player1.getID(), Flag.FIRST);
-                                String start2 = newGame.getPlayersBoard(player2.getID(), Flag.SECOND);
-                                out1.println(start1);
-                                out2.println(start2);
-                            }
+                            if (canStartNewGame()) startNewGame();
                             break;
 
                         case Protocol.MOVE:
@@ -128,21 +108,21 @@ public class ControllerServer {
                             break;
 
                         case Protocol.REPLAY:
-                            game = games.get(query.getID());
-                            game.replay(query.getID());
+                            if (query.getFlag() == Flag.REPLAY) {
+                                game = games.get(query.getID());
+                                game.replay(query.getID());
+                            } else if (query.getFlag() == Flag.NEW_GAME) {
+                                game = games.get(query.getID());
+                                Client client = game.getClient(query.getID());
+                                games.remove(query.getID());
+                                queued_players.add(client);
+                                if (canStartNewGame()) startNewGame();
+                            }
                             break;
 
                         case Protocol.EXIT:
-                            Client client;
                             game = games.remove(query.getID());
-                            client = game.exit(query.getID());
-
-                            // If player was inserted in queue, remove him.
-                            queued_players.remove(client);
-                            // TODO: Handle exiting.
-                            // TODO: Merge exit and replay into protocol GAME_OVER.
-                            // If the other player has not exited yet, add him to match queue.
-                            if (client != null && client.restart()) queued_players.add(client);
+                            game.exit(query.getID());
                             break;
 
                         case Protocol.BOARD_SETUP:
@@ -191,6 +171,32 @@ public class ControllerServer {
                     game.finaliseBoard(query.getID());
                 }
             }
+        }
+
+        private void startNewGame() {
+            try {
+                // TODO: Make this check with a new thread. Also, ID in Player must be ID returned
+                // TODO: by server. Pair must contain socket and Player.
+                // TODO: Alternatively hash table with 2 keys for player or socket.
+                // TODO: Make Pair iterable. Make it prettier too. Add functions too,
+                Client player2 = queued_players.remove(), player1 = queued_players.remove();
+                Game newGame = new Game(0, player1, player2);
+                System.out.println(player1.getID());
+                games.put(player1.getID(), newGame);
+                games.put(player2.getID(), newGame);
+                PrintWriter out1 = new PrintWriter(player1.getSocket().getOutputStream(), true);
+                PrintWriter out2 = new PrintWriter(player2.getSocket().getOutputStream(), true);
+                String start1 = newGame.getPlayersBoard(player1.getID(), Flag.FIRST);
+                String start2 = newGame.getPlayersBoard(player2.getID(), Flag.SECOND);
+                out1.println(start1);
+                out2.println(start2);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        private boolean canStartNewGame() {
+            return queued_players.size() % 2 == 0;
         }
 
     }

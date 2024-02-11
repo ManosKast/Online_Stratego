@@ -5,7 +5,6 @@ import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList;
 
 import static Util.Util.scaleImage;
 
@@ -20,7 +19,8 @@ public class SelectionUI extends JPanel {
     private JPanel images; // Πάνελ που περιέχει όλες τις εικόνες.
     private int picturesWidth;
     private int picturesHeight;
-    private final int[] initialMonsters; // Υπάρχει κυρίως για το scaling.
+    private int[] currentMonsters; // Υπάρχει κυρίως για το scaling.
+    private final int[] initialMonsters; // Αρχικά monsters.
     private final int[] captives = new int[12];
     private int ID;
     private JButton randomise;
@@ -36,6 +36,7 @@ public class SelectionUI extends JPanel {
         setLayout(new BorderLayout());
         this.initialMonsters = ((gameMode != 2) && (gameMode != 3)) ? new int[]{1, 1, 4, 5, 2, 2, 2, 3, 2, 1, 1, 6} :
                 new int[]{1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 3};
+        this.currentMonsters = initialMonsters.clone();
 
         this.monsters = monsters;
 
@@ -106,7 +107,7 @@ public class SelectionUI extends JPanel {
                 newButton.setName("" + (j + 4*i));
                 newButton.addMouseListener(listener);
                 newButton.setIcon(scaleImage(monsters[j + 4*i], width/6, height/5));
-                JLabel label = new JLabel("Total: " + initialMonsters[j + 4*i]);
+                JLabel label = new JLabel("Total: " + currentMonsters[j + 4*i]);
                 Font font = new Font("Verdana", Font.BOLD + Font.ITALIC, height/40);
                 label.setFont(font);
                 labels[i][j] = label;
@@ -128,8 +129,6 @@ public class SelectionUI extends JPanel {
         int height = this.getHeight() / 5;
         int width = this.getWidth() / 6;
 
-        ImageIcon monstersImage;
-
         Font font = new Font("Verdana", Font.BOLD + Font.ITALIC, size);
 
         for(int i = 0; i < 4; ++i){
@@ -150,7 +149,7 @@ public class SelectionUI extends JPanel {
         int sum = 0;
 
         for(int i = 0; i < size; ++i) {
-            captives[i] = this.initialMonsters[i] - referenceToMonsters[i];
+            captives[i] = this.currentMonsters[i] - referenceToMonsters[i];
             sum += captives[i];
         }
 
@@ -178,7 +177,15 @@ public class SelectionUI extends JPanel {
     }
 
     // Επειδή, αλλάζει μόνο του rounds.
-    public void restartGame(){this.ID = 2;}
+    public void restartGame(){
+        this.currentMonsters = this.initialMonsters.clone();
+        this.setRemainingMonsters();
+        for(int i = 0; i < 3; ++i){
+            for(int j = 0; j < 4; ++j){
+                this.labels[i][j].setText("Total: " + this.currentMonsters[j + 4*i]);
+            }
+        }
+    }
 
     private void scaleCapturedPanel(){
         int size = this.getHeight() / 30;
@@ -188,19 +195,19 @@ public class SelectionUI extends JPanel {
     }
 
     public void decrementMonster(int selectedMonster) {
-        --this.initialMonsters[selectedMonster];
+        --this.currentMonsters[selectedMonster];
         int row = selectedMonster / 4;
         int col = selectedMonster % 4;
 
-        this.labels[row][col].setText("Total: " + this.initialMonsters[selectedMonster]);
+        this.labels[row][col].setText("Total: " + this.currentMonsters[selectedMonster]);
     }
 
     public void increment(int monster) {
-        ++initialMonsters[monster];
+        ++currentMonsters[monster];
         int row = monster / 4;
         int col = monster % 4;
 
-        labels[row][col].setText("Total: " + initialMonsters[monster]);
+        labels[row][col].setText("Total: " + currentMonsters[monster]);
     }
 
     // Αλλάζει χρώμα στο mode που το mouse περιφέρεται κάποια στιγμή.

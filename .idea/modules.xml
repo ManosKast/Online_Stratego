@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Online_Stratego.iml" filepath="$PROJECT_DIR$/Online_Stratego.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Stratego.iml" filepath="$PROJECT_DIR$/Stratego.iml" />
     </modules>
   </component>
 </project>

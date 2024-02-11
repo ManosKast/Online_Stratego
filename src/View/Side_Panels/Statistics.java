@@ -39,7 +39,7 @@ public class Statistics extends JPanel {
         initialisePanels();
 
         if (flag == Flag.WAITING_OPPONENT){
-            this.playersTurn.setText("Waiting for opponent");
+            this.waitingOpponent();
         } else if (flag == Flag.START_GAME) {
             String text = (myTurn) ? yourTurn : opponentsTurn;
             this.playersTurn.setText(text);
@@ -137,10 +137,14 @@ public class Statistics extends JPanel {
         noRound.setFont(new Font("Verdana", Font.BOLD + Font.ITALIC, size));
     }
 
-    public void restartGame(byte turn){
+    public void restartGame(byte flag){
         this.round = 0;
-        myTurn = (turn == Flag.FIRST);
-        nextRound();
+        this.revivalCount = 0;
+        this.attackingRate.setText("  Successful attacking rate: 0%");
+        this.totalRevivals.setText("  Revivals: 0");
+        this.noRound.setText("Round: 1  ");
+        if (flag == Flag.WAITING_OPPONENT)
+            this.waitingOpponent();
     }
 
     public void scalePanels(int width, int height){
@@ -152,5 +156,9 @@ public class Statistics extends JPanel {
         myTurn = (turn == Flag.FIRST);
         String text = (myTurn) ? yourTurn : opponentsTurn;
         this.playersTurn.setText(text);
+    }
+
+    public void waitingOpponent() {
+        this.playersTurn.setText("Waiting for opponent");
     }
 }

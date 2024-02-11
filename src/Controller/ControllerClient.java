@@ -1,7 +1,6 @@
 package Controller;
 
 import Model.Player_and_Board.Player;
-import Model.game_characters.GameCharacters;
 import Protocol.Protocol;
 import Protocol.Flag;
 import View.View;
@@ -20,7 +19,6 @@ import java.io.PrintWriter;
 import java.lang.reflect.Type;
 import java.net.*;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -34,7 +32,6 @@ public class ControllerClient {
     private boolean deployment;
     private int reviveMonster;
     private static int selectedMonster;
-    private GameCharacters winner;
     private String message;
     private static final Packet packet = new Packet();
     static AtomicBoolean waitingResponse = new AtomicBoolean(false);
@@ -54,7 +51,6 @@ public class ControllerClient {
     public ControllerClient(){
         gameMode = 0;
         this.revive = false;
-        this.winner = null;
         this.reviveMonster = 0;
         gameHandler = new ButtonsPressed();
         view = new View(new UIPressed());
@@ -176,13 +172,12 @@ public class ControllerClient {
                         }
 
                         case Protocol.START_GAME -> {
-                            if (!running) {
-                                board = server.extractData(int[][].class);
-                                view.startGame(gameHandler, new BoardSetUp(), gameMode, server.getFlag());
-                                view.test(board);
-                                running = true;
-                                deployment = true;
-                            }
+                            board = server.extractData(int[][].class);
+                            if(view.isInitialised())
+                                view.clearFrame();
+                            view.startGame(gameHandler, new BoardSetUp(), gameMode, server.getFlag());
+                            view.test(board);
+                            deployment = true;
                         }
                         case Protocol.SELECT -> {
                             if (server.getFlag() == Flag.HIGHLIGHT && server.approved()) {
@@ -215,7 +210,8 @@ public class ControllerClient {
                         case Protocol.REPLAY -> {
                             if(server.approved()) {
                                 board = server.extractData(int[][].class);
-                                view.restartGame(board, server.getFlag());
+                                view.restartGame();
+                                deployment = true;
                             }
                         }
 
@@ -550,14 +546,18 @@ public class ControllerClient {
                 // TODO: Fix exit.
                 case "exit" -> {
                     query = packet.generatePacket(Protocol.EXIT, false, null);
+                    button.setEnabled(false);
                     out.println(query);
                     System.exit(0);
                 }
                 case "replay" -> {
-                    query = packet.generatePacket(Protocol.REPLAY, false, null);
                     button.setEnabled(false);
+                    query = packet.generatePacket(Protocol.REPLAY, Flag.REPLAY, false, null);
                 }
-                case "new game" -> query = packet.generatePacket(Protocol.FIND_MATCH, false, null);
+                case "new game" -> {
+                    button.setEnabled(false);
+                    query = packet.generatePacket(Protocol.REPLAY, Flag.NEW_GAME, false, null);
+                }
                 default -> {
                     int monster = button.getName().charAt(0) - '0';
                     reviveMonster = monster - 1;

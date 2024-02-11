@@ -20,7 +20,6 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -208,8 +207,11 @@ public class View extends JFrame implements ViewInterface {
         this.initialiseBoard(buttonHandler);
         this.initialiseMonsterSelection(monsterSelection);
 
-        this.setVisible(true);
         this.addComponentListener(window);
+
+        this.revalidate();
+        this.repaint();
+        this.setVisible(true);
     }
 
     // TODO: Add it in interface
@@ -226,29 +228,38 @@ public class View extends JFrame implements ViewInterface {
         selectionUI.setVisible(false);
         selectionUI.setEnabled(false);
 
-        int width = this.getWidth() - this.squares.getWidth();
-        int height = this.getHeight() - 35;
 
-        this.roundPanel.setSize(new Dimension(width, height));
-        this.roundPanel.setLayout(new GridLayout(2, 1));
+        if (rules == null) {
+            int width = this.getWidth() - this.squares.getWidth();
+            int height = this.getHeight() - 35;
 
-        this.topHalfRoundPanel.setLayout(new GridLayout(2, 1));
-        this.topHalfRoundPanel.setSize(new Dimension(width, height / 2));
+            this.roundPanel.setSize(new Dimension(width, height));
+            this.roundPanel.setLayout(new GridLayout(2, 1));
 
-        this.rules = new ActiveRules(width, height / 4);
-        this.rules.tickRules(gameMode);
+            this.topHalfRoundPanel.setLayout(new GridLayout(2, 1));
+            this.topHalfRoundPanel.setSize(new Dimension(width, height / 2));
 
-        this.stats = new Statistics(width, height / 4, turn, flag, turn);
-        this.monsters = new CapturedMonsters(width, height / 2, opponentMonsters);
+            this.rules = new ActiveRules(width, height / 4);
+            this.rules.tickRules(gameMode);
 
-        this.topHalfRoundPanel.add(this.rules);
-        this.topHalfRoundPanel.add(this.stats);
+            this.stats = new Statistics(width, height / 4, turn, flag, turn);
+            this.monsters = new CapturedMonsters(width, height / 2, opponentMonsters);
 
-        this.roundPanel.add(this.topHalfRoundPanel);
-        this.roundPanel.add(this.monsters);
+            this.topHalfRoundPanel.add(this.rules);
+            this.topHalfRoundPanel.add(this.stats);
 
+            this.roundPanel.add(this.topHalfRoundPanel);
+            this.roundPanel.add(this.monsters);
+        } else {
+            this.stats.restartGame(flag);
+            this.monsters.restartGame();
+        }
+
+        this.roundPanel.setVisible(true);
+        this.roundPanel.setEnabled(true);
         this.add(roundPanel, BorderLayout.EAST);
 
+        this.revalidate();
         this.repaint();
         this.setVisible(true);
     }
@@ -260,6 +271,7 @@ public class View extends JFrame implements ViewInterface {
             setVisible(true);
         }
     }
+
     @Override
     public void nextRound(Player attacker, Player defender) {
 
@@ -351,7 +363,7 @@ public class View extends JFrame implements ViewInterface {
         this.concealGame();
 
         stats.retractNextRound();
-        reviveMonster = new ReviveMonster(this.getWidth(), this.getHeight(), capturedMonsters, ID, userMonsters, handler);
+        reviveMonster = new ReviveMonster(this.getWidth(), this.getHeight(), capturedMonsters, userMonsters, handler);
 
         this.add(reviveMonster, BorderLayout.CENTER);
         this.repaint();
@@ -412,29 +424,28 @@ public class View extends JFrame implements ViewInterface {
     public void restartGame(Player attacker, Player defender){}
 
 
-    public void restartGame(int[][] board, byte flag) {
+    public void restartGame() {
         endGameUI.disableUI();
         this.remove(endGameUI);
 
         this.add(squares, BorderLayout.CENTER);
-        this.add(roundPanel, BorderLayout.EAST);
+        this.add(selectionUI, BorderLayout.EAST);
+
+        this.selectionUI.restartGame();
 
         this.squares.setEnabled(true);
         this.squares.setVisible(true);
 
-        this.roundPanel.setEnabled(true);
-        this.roundPanel.setVisible(true);
-
-
-        stats.restartGame(flag);
-        monsters.restartGame();
+        this.selectionUI.setEnabled(true);
+        this.selectionUI.setVisible(true);
 
         emptyBoard();
-        test(board);
 
         revalidate();
         repaint();
     }
+
+
 
     //TODO: Change implementation's signature.
     @Override
@@ -533,6 +544,46 @@ public class View extends JFrame implements ViewInterface {
         endGameUI.opponentRematch();
         this.repaint();
         this.setVisible(true);
+    }
+
+    public boolean isInitialised() {
+        return endGameUI != null;
+    }
+
+    public void restartGame(byte flag) {
+        endGameUI.disableUI();
+        this.remove(endGameUI);
+
+        this.add(squares, BorderLayout.CENTER);
+
+        initialiseMonsterSelection(selectionUI.getMouseListeners()[0]);
+        emptyBoard();
+
+        this.squares.setEnabled(true);
+        this.squares.setVisible(true);
+
+        this.selectionUI.setEnabled(true);
+        this.selectionUI.setVisible(true);
+
+        revalidate();
+        repaint();
+    }
+
+    public void clearFrame() {
+        squares.setVisible(false);
+        roundPanel.setVisible(false);
+        selectionUI.setVisible(false);
+        endGameUI.setVisible(false);
+        reviveMonster.setVisible(false);
+        startingUI.setVisible(false);
+        this.remove(squares);
+        this.remove(roundPanel);
+        this.remove(selectionUI);
+        this.remove(endGameUI);
+        this.remove(reviveMonster);
+        this.remove(startingUI);
+        revalidate();
+        repaint();
     }
 
     // Για scaling.

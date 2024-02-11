@@ -23,7 +23,7 @@ public class Player implements PlayerInterface {
 
     // TODO: Add in referenceToMonsters third row that contains captured monsters.
     private int[][] referenceToMonsters;
-    private static Board gameBoard; // Περιέχει ένα reference του ταμπλού.
+    private Board gameBoard; // Περιέχει ένα reference του ταμπλού.
     private int ID; // Για να ταυτοποιείται ο παίκτης.
     private int gameMode; // Διατηρεί το mode παιχνιδιού.
     private String playerID = "";
@@ -109,7 +109,7 @@ public class Player implements PlayerInterface {
         int id = (playerCount % 2 == 0) ? 1 : 2;
 
         // Static μεταβλητές, οπότε το αρχικοποιώ μονομιάς.
-        if(playerCount == 0)
+        if(playerCount % 2 == 0)
             gameBoard = new Board(mode);
 
         initialiseArray(mode);
@@ -126,14 +126,19 @@ public class Player implements PlayerInterface {
         ++playerCount;
 
     }
+
+    public Player(int gameMode, String id, Player attacker) {
+        this(gameMode, id);
+        this.gameBoard = attacker.gameBoard;
+    }
+
     // Αρχικοποιεί τον πίνακα referenceToMonsters.
     private void initialiseArray(int mode) {
         // Εάν mode == 2 ή mode == 3, τότε μισά τέρατα.
         this.referenceToMonsters = new int[2][12];
         this.referenceToMonsters[0] = (mode != 2 && mode != 3) ? new int[]{1, 6, 1, 4, 5, 2, 2, 2, 3, 2, 1, 1} :
                 new int[]{1, 3, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1};
-        this.referenceToMonsters[1] = (mode != 2 && mode != 3) ? new int[]{1, 6, 1, 4, 5, 2, 2, 2, 3, 2, 1, 1} :
-                new int[]{1, 3, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1};
+        this.referenceToMonsters[1] = Arrays.copyOf(this.referenceToMonsters[0], this.referenceToMonsters[0].length);
 
     }
 
@@ -217,8 +222,6 @@ public class Player implements PlayerInterface {
             else if(this.ID == 2 && monster.getLine() == 0)
                 canRevive = true;
 
-            System.out.println("First Can revive: " + canRevive + ", ID: " + this.ID + ", line: " + monster.getLine());
-
             // Εάν το τέρας βρίσκεται σε τοποθεσία ικανή για αναγέννηση και υπάρχει χώρος
             // για να πραγματοποιηθεί η αναγέννηση, τότε είναι ικανή η αναγέννηση.
             if(canRevive){
@@ -236,7 +239,6 @@ public class Player implements PlayerInterface {
             }
         }
 
-        System.out.println("Can revive: " + canRevive);
         return canRevive;
     }
 
@@ -286,7 +288,6 @@ public class Player implements PlayerInterface {
         if(monster < 0)
             return false;
 
-        System.out.println("Captured: " + (this.referenceToMonsters[0][monster + 2] != this.referenceToMonsters[1][monster + 2]));
         // Εάν ισοδυναμεί η παρακάτω παράσταση, τότε δεν έχει αιχμαλωτιστεί κανένα τέρας monster.
         return (this.referenceToMonsters[0][monster + 2] != this.referenceToMonsters[1][monster + 2]);
     }
@@ -536,6 +537,34 @@ public class Player implements PlayerInterface {
         return null;
     }
 
+    public void clearBoard(Player otherPlayer) {
+        // Προσθέτει τα τέρατα που έχουν αιχμαλωτιστεί, στη λίστα ζωντανών τεράτων.
+        for(int i = otherPlayer.capturedMonsters.size() - 1; i >= 0; --i){
+            this.aliveMonsters.add(otherPlayer.capturedMonsters.get(i));
+            otherPlayer.capturedMonsters.remove(i);
+        }
+
+        for(int i = this.capturedMonsters.size() - 1; i >= 0; --i){
+            otherPlayer.aliveMonsters.add(this.capturedMonsters.get(i));
+            this.capturedMonsters.remove(i);
+        }
+
+        Player currentPlayer;
+
+        for(int i = 0; i < 2; ++i){
+            currentPlayer = (i == 0) ? this : otherPlayer;
+
+            currentPlayer.revivals = 0;
+
+            System.arraycopy(this.referenceToMonsters[1], 0, currentPlayer.referenceToMonsters[0], 0, 12);
+
+            for(int j = 0; j < monstersThatCanRevive.length; ++j)
+                currentPlayer.monstersThatCanRevive[j] = null;
+
+        }
+
+        gameBoard.clearBoard();
+    }
 
     public void restartGame(Player otherPlayer){
 
@@ -550,17 +579,17 @@ public class Player implements PlayerInterface {
             this.capturedMonsters.remove(i);
         }
 
-        Player delete;
+        Player currentPlayer;
 
         for(int i = 0; i < 2; ++i){
-            delete = (i == 0) ? this : otherPlayer;
+            currentPlayer = (i == 0) ? this : otherPlayer;
 
-            delete.revivals = 0;
+            currentPlayer.revivals = 0;
 
-            System.arraycopy(this.referenceToMonsters[1], 0, delete.referenceToMonsters[0], 0, 12);
+            System.arraycopy(this.referenceToMonsters[1], 0, currentPlayer.referenceToMonsters[0], 0, 12);
 
             for(int j = 0; j < monstersThatCanRevive.length; ++j)
-               delete.monstersThatCanRevive[j] = null;
+               currentPlayer.monstersThatCanRevive[j] = null;
 
         }
 

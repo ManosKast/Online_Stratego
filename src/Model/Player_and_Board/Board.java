@@ -5,7 +5,6 @@ import Model.game_characters.ImmovableObjects.Forbidden_Zone.ForbiddenZone;
 import Model.game_characters.ImmovableObjects.ImmovableMonsters.*;
 import Model.game_characters.MoveableObjects.Regular_Monsters.*;
 import Model.game_characters.MoveableObjects.SpecialMoveableObjects.Special_Characters.*;
-import Server.Game;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -691,5 +690,19 @@ class Board {
                 if (piecesOnBoard[i][j] == null) return false;
 
         return true;
+    }
+
+    public void clearBoard() {
+        for (int i = 0; i < 8; ++i)
+            for (int j = 0; j < 10; ++j)
+                piecesOnBoard[i][j] = null;
+
+        firstPlayersTotalAttacks = 0;
+        firstPlayersSuccessfulAttacks = 0;
+        secondPlayersTotalAttacks = 0;
+        secondPlayersSuccessfulAttacks = 0;
+
+        for (int i = 0; i < 2; ++i)
+            System.arraycopy(total, 0, check[i], 0, 12);
     }
 }

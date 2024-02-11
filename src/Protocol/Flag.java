@@ -19,6 +19,10 @@ public class Flag {
     public static final byte OPPONENT_EXITED = 3;
     public static final byte OPPONENT_REMATCH = 4;
 
+    // Flags regarding replay
+    public static final byte REPLAY = 1;
+    public static final byte NEW_GAME = 2;
+
     // Flags regarding first turn.
     public static final byte FIRST = 1;
     public static final byte SECOND = 2;

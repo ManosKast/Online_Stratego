@@ -15,12 +15,10 @@ public class ReviveMonster extends JPanel {
     private JLabel chooseMonster;
     private JPanel revivalPanel;
     private final JButton[] buttons = new JButton[10];
-    private final int ID;
-    private final ArrayList<Image> playersMonsters;
     private final int[] capturedMonsters;
     private final BufferedImage[] monsters;
 
-    public ReviveMonster(int width, int height, int[] capturedMonsters, int ID, BufferedImage[] monsters, MouseListener handler){
+    public ReviveMonster(int width, int height, int[] capturedMonsters, BufferedImage[] monsters, MouseListener handler){
         this.setSize(width, height);
         this.setLayout(new BorderLayout());
         this.setBackground(Color.BLACK);
@@ -28,8 +26,6 @@ public class ReviveMonster extends JPanel {
 
         this.monsters = monsters;
         this.capturedMonsters = capturedMonsters;
-        this.ID = ID;
-        this.playersMonsters = new ArrayList<>();
 
         this.revivePanel(handler);
 
@@ -49,42 +45,12 @@ public class ReviveMonster extends JPanel {
         revivalPanel.setBackground(Color.BLACK);
         revivalPanel.setLayout(new GridLayout(2, 5));
 
-        this.addMonstersImages();
-
         this.addButtons(handler);
         this.scalePanels();
 
         this.add(chooseMonster, BorderLayout.NORTH);
         this.add(revivalPanel, BorderLayout.CENTER);
 
-    }
-
-    // Προσθέτει στη λίστα τα τέρατα που μπορεί να αναγεννήσει ο επιτιθέμενος.
-    private void addMonstersImages(){
-        if(this.ID == 1){
-            this.playersMonsters.add(new ImageIcon("src/images/bluePieces/slayerB.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/bluePieces/scoutB.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/bluePieces/dwarfB.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/bluePieces/elfB.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/bluePieces/yeti.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/bluePieces/sorceressB.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/bluePieces/beastRiderB.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/bluePieces/knightB.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/bluePieces/mageB.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/bluePieces/dragonB.png").getImage());
-
-        } else {
-            this.playersMonsters.add(new ImageIcon("src/images/RedPieces/slayerR.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/RedPieces/scoutR.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/RedPieces/dwarfR.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/RedPieces/elfR.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/RedPieces/lavaBeast.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/RedPieces/sorceressR.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/RedPieces/beastRiderR.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/RedPieces/knightR.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/RedPieces/mageR.png").getImage());
-            this.playersMonsters.add(new ImageIcon("src/images/RedPieces/dragonR.png").getImage());
-        }
     }
 
     // Πρόσθεσε το scaleButtons.
@@ -106,7 +72,7 @@ public class ReviveMonster extends JPanel {
             but = buttons[i];
 
             but.addMouseListener(handler);
-            but.setName("" + i);
+            but.setName(String.valueOf(i));
             revivalPanel.add(but);
         }
     }
@@ -122,8 +88,11 @@ public class ReviveMonster extends JPanel {
             this.buttons[i].setDisabledIcon(monstersIcon);
 
             // Εάν δεν έχει αιχμαλωτηθεί τέρας του εν λόγω είδους, τότε δε γίνεται να αναγεννηθεί.
-            if(!this.canRevive(i + 2))
+            if(!this.canRevive(i + 2)) {
+                this.buttons[i].setIcon(null);
+                this.buttons[i].setBackground(Color.BLACK);
                 this.buttons[i].setEnabled(false);
+            }
         }
     }
 

@@ -20,6 +20,7 @@ public class ControllerServer {
     private final String serverID = "Server";
     static Hashtable<String, Game> games = new Hashtable<>();
     static LinkedList<Client> queued_players = new LinkedList<>();
+    static int players = 0;
 
     public static void main(String[] args) throws IOException {
         int portNumber = 1234; // Example port number
@@ -32,7 +33,7 @@ public class ControllerServer {
                 System.out.println("Accepted new client " + clientSocket.getRemoteSocketAddress());
                 // TODO: Create method to generate random ID based on IP.
                 // TODO: Create a thread that checks if there are enough clients to create a game.
-                queued_players.add(new Client(clientSocket, "Player" + queued_players.size())); // Add client to queue
+                queued_players.add(new Client(clientSocket, "Player" + players++)); // Add client to queue
                 // Create and start a new thread for the client
                 new ClientHandler(clientSocket).start();
             }

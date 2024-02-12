@@ -86,7 +86,6 @@ public class Game {
     public String getPlayersBoard(String player, byte flag, byte protocol){
         GameCharacters[][] board = attacker.getBoard();
         int[][] icons = new int[board.length][board[0].length];
-        Player invertedPlayer = (attacker.getPlayerID().equals(player)) ? attacker : defender;
         // TODO: Remove comments and make it prettier.
         // TODO: Invert attacker's board.
         /*
@@ -138,10 +137,21 @@ public class Game {
 
     public String selectMonster(int row, int column, String player){
         if (revive) return packet.generatePacket(Protocol.SELECT, false, 0);
+        Player p = (attacker.getPlayerID().equals(player)) ? attacker : defender;
+
+        if (requiresInversion(p)) {
+            row = invertRow(row);
+            column = invertColumn(column);
+        }
+
         if (isValidMonster(row, column) && isPlayersTurn(player)){
+            ArrayList<Integer> highlightPositions = (ArrayList<Integer>) p.getMoveablePath(row, column);
+            if (requiresInversion(p))
+                highlightPositions = invertPositions(highlightPositions);
+
             positionBuffer[0] = row;
             positionBuffer[1] = column;
-            return packet.generatePacket(Protocol.SELECT, Flag.HIGHLIGHT, true, attacker.getMoveablePath(row, column));
+            return packet.generatePacket(Protocol.SELECT, Flag.HIGHLIGHT, true, highlightPositions);
         }
         return packet.generatePacket(Protocol.SELECT, false, 0);
     }
@@ -151,18 +161,33 @@ public class Game {
     // TODO: Should return void.
     public void moveMonster(int nextRow, int nextCol, String player) {
         boolean battle = false;
+        int row, col, pRow, pCol;
         // TODO: Add check if players turn.
-        if(!isValidMovingPosition(nextRow, nextCol)) {
-            packet1 = packet.generatePacket(Protocol.MOVE, false, 0);
-            packetBuffer.setFirst(packet1); packetBuffer.setSecond(null);
-            attackerOut.println(packet1);
-            return;
-        }
+
         // TODO: Change packet to packet2 or defenderPacket.
         if (!isPlayersTurn(player)) {
             packet1 = packet.generatePacket(Protocol.MOVE, false, 0);
             packetBuffer.setFirst(packet1); packetBuffer.setSecond(null);
             defenderOut.println(packet1);
+            return;
+        }
+
+        if (requiresInversion(attacker)) {
+            row = invertRow(nextRow);
+            col = invertColumn(nextCol);
+            pRow = positionBuffer[0];
+            pCol = positionBuffer[1];
+        } else {
+            row = nextRow;
+            col = nextCol;
+            pRow = invertRow(positionBuffer[0]);
+            pCol = invertColumn(positionBuffer[1]);
+        }
+
+        if(!isValidMovingPosition(row, col)) {
+            packet1 = packet.generatePacket(Protocol.MOVE, false, 0);
+            packetBuffer.setFirst(packet1); packetBuffer.setSecond(null);
+            attackerOut.println(packet1);
             return;
         }
 
@@ -173,14 +198,18 @@ public class Game {
             return;
         }
 
-        GameCharacters monster = defender.getMonster(nextRow, nextCol);
-        int mIndex = (monster != null) ? ((monster.getPower() == Integer.MAX_VALUE) ? 11 : monster.getPower()) : -2;
-        int[] moveTo = {nextRow, nextCol, mIndex};
-        int[] move = {positionBuffer[0], positionBuffer[1], nextRow, nextCol, attacker.getMonster(positionBuffer[0], positionBuffer[1]).getPower()};
-        // TODO: Add message. Change moveCharacter so there is no battle boolean.
-        if (attacker.isAttacking(nextRow, nextCol)) battle = true;
+        // TODO: Return a flag instead of GameCharacters
+        GameCharacters monster = defender.getMonster(row, col);
 
-        winner = attacker.moveCharacter(positionBuffer[0], nextRow, positionBuffer[1], nextCol, defender);
+        int mIndex = (monster != null) ? ((monster.getPower() == Integer.MAX_VALUE) ? 11 : monster.getPower()) : -2;
+
+        int[] moveTo = {nextRow, nextCol, mIndex};
+        int[] move = {pRow, pCol, invertRow(nextRow), invertColumn(nextCol), attacker.getMonster(positionBuffer[0], positionBuffer[1]).getPower()};
+
+        // TODO: Add message. Change moveCharacter so there is no battle boolean.
+        if (attacker.isAttacking(row, col)) battle = true;
+
+        winner = attacker.moveCharacter(positionBuffer[0], row, positionBuffer[1], col, defender);
 
         if(battle) {
             // Collect statistics.
@@ -348,6 +377,10 @@ public class Game {
         int i = p.getID() - 1;
 
         ArrayList<Integer> highlightPositions = (ArrayList<Integer>) p.isAvailableMonster(monster);
+
+        if (requiresInversion(p))
+            highlightPositions = invertPositions(highlightPositions);
+
         if (highlightPositions == null) {
             selectedMonster[i] = -1;
             response = packet.generatePacket(Protocol.BOARD_SETUP, Flag.SELECT_MONSTER, false, -1);
@@ -361,35 +394,39 @@ public class Game {
 
     }
 
-    public void positionMonster(String player, int[] position) {
-        String response;
-        Player p = (attacker.getPlayerID().equals(player)) ? attacker : defender;
-        PrintWriter aOut = (attacker.getPlayerID().equals(player)) ? attackerOut : defenderOut;
-        PrintWriter dOut = (attacker.getPlayerID().equals(player)) ? defenderOut : attackerOut;
-        int i = p.getID() - 1;
-
-        if (p.canPositionMonster(position[0], position[1], selectedMonster[i])) {
-            int[] data = {position[0], position[1], selectedMonster[i]};
-            response = packet.generatePacket(Protocol.BOARD_SETUP, Flag.POSITION_MONSTER, true, data);
-            aOut.println(response);
-            response = packet.generatePacket(Protocol.ENEMY_BOARD_SETUP, Flag.POSITION_MONSTER, true, position);
-            dOut.println(response);
-        } else aOut.println(packet.generatePacket(Protocol.BOARD_SETUP, Flag.POSITION_MONSTER, false, 0));
-    }
-
-    private int[][] invertBoard() {
-        GameCharacters[][] board = attacker.getBoard();
-        int depth = board.length;
-        int width = board[0].length;
-        int[][] icons = new int[board.length][board[0].length];
-        for(int i = 0; i < board.length; ++i) {
-            for (int j = 0; j < board[i].length; ++j)
-                if (board[i][j] == null) icons[i][j] = 0;
-                else if (board[i][j].getPlayersID() == 1) icons[i][j] = board[depth - i][width - j].getPower();
-                else icons[i][j] = 12;
+    private ArrayList<Integer> invertPositions(ArrayList<Integer> highlightPositions) {
+        if(highlightPositions == null || highlightPositions.size() == 0) return null;
+        ArrayList<Integer> invertedPositions = new ArrayList<>(highlightPositions.size());
+        for (int i = 0; i < highlightPositions.size(); i += 2) {
+            System.out.println("Inverting i="+i+": " + highlightPositions.get(i) + " " + highlightPositions.get(i + 1));
+            invertedPositions.add(invertRow(highlightPositions.get(i)));
+            invertedPositions.add(invertColumn(highlightPositions.get(i + 1)));
         }
-        return icons;
+        return invertedPositions;
     }
+
+    public void positionMonster(String player, int[] position) {
+        Player currentPlayer = (attacker.getPlayerID().equals(player)) ? attacker : defender;
+        PrintWriter currentPlayerOut = (attacker.getPlayerID().equals(player)) ? attackerOut : defenderOut;
+        PrintWriter opponentOut = (attacker.getPlayerID().equals(player)) ? defenderOut : attackerOut;
+
+        int[] invertedPosition = {invertRow(position[0]), invertColumn(position[1])};
+        int[] currentPlayerPosition = requiresInversion(currentPlayer) ? invertedPosition : position;
+
+        int i = currentPlayer.getID() - 1, row = currentPlayerPosition[0], column = currentPlayerPosition[1];
+
+        if (currentPlayer.canPositionMonster(row, column, selectedMonster[i])) {
+            int[] data = {position[0], position[1], selectedMonster[i]};
+            packet1 = packet.generatePacket(Protocol.BOARD_SETUP, Flag.POSITION_MONSTER, true, data);
+            packet2 = packet.generatePacket(Protocol.ENEMY_BOARD_SETUP, Flag.POSITION_MONSTER, true, invertedPosition);
+            executor.submit(new SendMessage(currentPlayerOut, packet1));
+            executor.submit(new SendMessage(opponentOut, packet2));
+        } else {
+            packet1 = packet.generatePacket(Protocol.BOARD_SETUP, Flag.POSITION_MONSTER, false, 0);
+            currentPlayerOut.println(packet1);
+        }
+    }
+
 
     public void replay(String id) {
         PrintWriter opponentOut = (attacker.getPlayerID().equals(id)) ? defenderOut : attackerOut;
@@ -424,11 +461,14 @@ public class Game {
         PrintWriter aOut = (attacker.getPlayerID().equals(player)) ? attackerOut : defenderOut;
         PrintWriter dOut = (attacker.getPlayerID().equals(player)) ? defenderOut : attackerOut;
 
-        int monster = p.clearPosition(position);
+        int[] invertedPosition = {invertRow(position[0]), invertColumn(position[1])};
+        int[] currentPlayerPosition = requiresInversion(p) ? invertedPosition : position;
+        int monster = p.clearPosition(currentPlayerPosition);
+
         if(monster != -1) {
             int[] data = {position[0], position[1], monster};
             packet1 = packet.generatePacket(Protocol.BOARD_SETUP, Flag.CLEAR_POSITION, true, data);
-            packet2 = packet.generatePacket(Protocol.ENEMY_BOARD_SETUP, Flag.CLEAR_POSITION, true, position);
+            packet2 = packet.generatePacket(Protocol.ENEMY_BOARD_SETUP, Flag.CLEAR_POSITION, true, invertedPosition);
             executor.submit(new SendMessage(aOut, packet1));
             executor.submit(new SendMessage(dOut, packet2));
         }
@@ -444,17 +484,33 @@ public class Game {
         PrintWriter aOut = (attacker.getPlayerID().equals(player)) ? attackerOut : defenderOut;
         PrintWriter dOut = (attacker.getPlayerID().equals(player)) ? defenderOut : attackerOut;
 
-        List<Integer> data = p.randomiseBoard();
+        ArrayList<Integer> data = (ArrayList<Integer>) p.randomiseBoard();
+
+        if (requiresInversion(p))
+            data = randomiseInversion(data);
+
         int[] data2 = new int[data.size() - data.size()/3];
         int j = 0;
+
         for(int i = 0; i < data.size(); ++i) {
-            data2[j++] = data.get(i++);
-            data2[j++] = data.get(i++);
+            data2[j++] = invertRow(data.get(i++));
+            data2[j++] = invertColumn(data.get(i++));
         }
         packet1 = packet.generatePacket(Protocol.BOARD_SETUP, Flag.RANDOMISE_BOARD, true, data);
         packet2 = packet.generatePacket(Protocol.ENEMY_BOARD_SETUP, Flag.RANDOMISE_BOARD, true, data2);
         executor.submit(new SendMessage(aOut, packet1));
         executor.submit(new SendMessage(dOut, packet2));
+    }
+
+    private ArrayList<Integer> randomiseInversion(ArrayList<Integer> data) {
+        if(data == null || data.size() == 0) return null;
+        ArrayList<Integer> invertedData = new ArrayList<>(data.size());
+        for (int i = 0; i < data.size(); i += 3) {
+            invertedData.add(invertRow(data.get(i)));
+            invertedData.add(invertColumn(data.get(i + 1)));
+            invertedData.add(data.get(i + 2));
+        }
+        return invertedData;
     }
 
     public synchronized void finaliseBoard(String player) {
@@ -492,11 +548,16 @@ public class Game {
 
     }
 
-    private int[] invertPosition(int[] position) {
-        int[] newPosition = new int[2];
-        newPosition[0] = position[0];
-        newPosition[1] = position[1];
-        return newPosition;
+    private Integer invertRow(Integer integer) {
+        return 7 - integer;
+    }
+
+    private Integer invertColumn(Integer integer) {
+        return 9 - integer;
+    }
+
+    private boolean requiresInversion(Player p) {
+        return p == invertedPlayer;
     }
 
     static class SendMessage implements Runnable {

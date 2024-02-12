@@ -134,7 +134,7 @@ public class SelectionUI extends JPanel {
         for(int i = 0; i < 4; ++i){
             for(int j = 0; j < 3; ++j){
                 monstersPictures[i][j].setFont(font);
-                monstersPictures[i][j].setText(Integer.toString(captives[monster]));
+                monstersPictures[i][j].setText(Integer.toString(initialMonsters[monster]));
                 monstersPictures[i][j].setIcon(scaleImage(monsters[monster], width, height));
                 ++monster;
             }
@@ -183,6 +183,7 @@ public class SelectionUI extends JPanel {
         for(int i = 0; i < 3; ++i){
             for(int j = 0; j < 4; ++j){
                 this.labels[i][j].setText("Total: " + this.currentMonsters[j + 4*i]);
+                this.boardSquares[i][j].setIcon(scaleImage(monsters[j + 4*i], this.getWidth()/6, this.getHeight()/5));
             }
         }
     }
@@ -208,6 +209,11 @@ public class SelectionUI extends JPanel {
         int col = monster % 4;
 
         labels[row][col].setText("Total: " + currentMonsters[monster]);
+    }
+
+    public void newGame(BufferedImage[] userMonsters) {
+        this.monsters = userMonsters;
+        this.restartGame();
     }
 
     // Αλλάζει χρώμα στο mode που το mouse περιφέρεται κάποια στιγμή.

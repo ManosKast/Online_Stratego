@@ -199,8 +199,8 @@ public class View extends JFrame implements ViewInterface {
 
     public void startGame(MouseListener buttonHandler, MouseListener monsterSelection, int gameMode, int turn){
         this.gameMode = gameMode;
-        userMonsters = (turn == 1) ? lightMonstersPictures : voidMonstersPictures;
-        opponentMonsters = (turn == 1) ? voidMonstersPictures : lightMonstersPictures;
+        userMonsters = (turn == Flag.FIRST) ? lightMonstersPictures : voidMonstersPictures;
+        opponentMonsters = (turn == Flag.FIRST) ? voidMonstersPictures : lightMonstersPictures;
 
         this.startingUI.disableUI();
 
@@ -227,7 +227,6 @@ public class View extends JFrame implements ViewInterface {
         this.remove(selectionUI);
         selectionUI.setVisible(false);
         selectionUI.setEnabled(false);
-
 
         if (rules == null) {
             int width = this.getWidth() - this.squares.getWidth();
@@ -550,23 +549,25 @@ public class View extends JFrame implements ViewInterface {
         return endGameUI != null;
     }
 
-    public void restartGame(byte flag) {
+    public void startGame(byte flag) {
+        userMonsters = (flag == Flag.FIRST) ? lightMonstersPictures : voidMonstersPictures;
+        opponentMonsters = (flag == Flag.FIRST) ? voidMonstersPictures : lightMonstersPictures;
+
         endGameUI.disableUI();
         this.remove(endGameUI);
 
+        this.squares.setVisible(true);
         this.add(squares, BorderLayout.CENTER);
 
-        initialiseMonsterSelection(selectionUI.getMouseListeners()[0]);
-        emptyBoard();
-
-        this.squares.setEnabled(true);
-        this.squares.setVisible(true);
-
-        this.selectionUI.setEnabled(true);
+        this.selectionUI.newGame(userMonsters);
         this.selectionUI.setVisible(true);
+        this.add(selectionUI, BorderLayout.EAST);
+
+        emptyBoard();
 
         revalidate();
         repaint();
+        setVisible(true);
     }
 
     public void clearFrame() {

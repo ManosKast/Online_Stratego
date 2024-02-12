@@ -63,7 +63,7 @@ public class Player implements PlayerInterface {
                 throw new IllegalPlayerException("Too many players.");
 
         }catch(IllegalPlayerException e){
-            System.out.println(e);
+            e.printStackTrace();
             return;
         }
 
@@ -100,7 +100,7 @@ public class Player implements PlayerInterface {
                 throw new IllegalPlayerException("Too many players.");
 
         }catch(IllegalPlayerException e){
-            System.out.println(e);
+            e.printStackTrace();
             return;
         }
 

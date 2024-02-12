@@ -174,8 +174,9 @@ public class ControllerClient {
                         case Protocol.START_GAME -> {
                             board = server.extractData(int[][].class);
                             if(view.isInitialised())
-                                view.clearFrame();
-                            view.startGame(gameHandler, new BoardSetUp(), gameMode, server.getFlag());
+                                view.startGame(server.getFlag());
+                            else
+                                view.startGame(gameHandler, new BoardSetUp(), gameMode, server.getFlag());
                             view.test(board);
                             deployment = true;
                         }

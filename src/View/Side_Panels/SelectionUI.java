@@ -106,7 +106,7 @@ public class SelectionUI extends JPanel {
                 panels[i][j] = panel;
                 newButton.setName("" + (j + 4*i));
                 newButton.addMouseListener(listener);
-                newButton.setIcon(scaleImage(monsters[j + 4*i], width/6, height/5));
+                newButton.setIcon(scaleImage(monsters[j + 4*i], width/4, height/5));
                 JLabel label = new JLabel("Total: " + currentMonsters[j + 4*i]);
                 Font font = new Font("Verdana", Font.BOLD + Font.ITALIC, height/40);
                 label.setFont(font);
@@ -183,7 +183,7 @@ public class SelectionUI extends JPanel {
         for(int i = 0; i < 3; ++i){
             for(int j = 0; j < 4; ++j){
                 this.labels[i][j].setText("Total: " + this.currentMonsters[j + 4*i]);
-                this.boardSquares[i][j].setIcon(scaleImage(monsters[j + 4*i], this.getWidth()/6, this.getHeight()/5));
+                this.boardSquares[i][j].setIcon(scaleImage(monsters[j + 4*i], this.getWidth()/4, this.getHeight()/5));
             }
         }
     }

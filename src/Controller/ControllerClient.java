@@ -322,8 +322,9 @@ public class ControllerClient {
                 case Flag.REVIVE_POSITION -> {
                     int[] position = server.extractData(int[].class);
                     view.reviveMonster(reviveMonster + 2, position);
-                    int row = position[0], column = position[1];
-                    board[row][column] = reviveMonster;
+                    int row = position[0], column = position[1], monster = reviveMonster + 2;
+                    board[row][column] = monster;
+                    ButtonsPressed.selected = false;
                     view.nextRound();
                     resumeGame();
                 }

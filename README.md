@@ -1,7 +1,5 @@
 TODO:
 
-Fix Endgame and rematch
-
 Board elements should be accessed solely by Player class
 
 Add timers
@@ -11,8 +9,6 @@ Remove static modifiers from player and board classes
 Add game related exceptions, so server does not break
 
 In case a player exits mid-game display victory message to other player
-
-Invert attacker's board
 
 Add encryption
 
@@ -27,3 +23,5 @@ Add protection against potential threats
 Check for impersonation
 
 Maybe add sql db
+
+Maybe add mini-game for first move

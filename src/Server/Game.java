@@ -10,7 +10,6 @@ import Model.Player_and_Board.Player;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -62,20 +61,10 @@ public class Game {
         this.attacker = new Player(gameMode, player1.getID());
         this.defender = new Player(gameMode, player2.getID(), attacker);
         this.invertedPlayer = attacker;
-        System.out.println("Attacker: " + attacker.getID() + " Defender: " + defender.getID());
         positionBuffer[0] = -1;
         positionBuffer[1] = -1;
     }
 
-    public String startGame(){
-        GameCharacters[][] board = attacker.getBoard();
-        int[][] icons = new int[board.length][board[0].length];
-        for(int i = 0; i < board.length; ++i)
-            for(int j = 0; j < board[i].length; ++j)
-                if (board[i][j] != null)
-                    icons[i][j] = board[i][j].getPower();
-        return packet.generatePacket(Protocol.START_GAME, true, icons);
-    }
 
     // TODO: Remove and use only the one with 3 arguments.
     public String getPlayersBoard(String player, byte flag){
@@ -162,9 +151,7 @@ public class Game {
     public void moveMonster(int nextRow, int nextCol, String player) {
         boolean battle = false;
         int row, col, pRow, pCol;
-        // TODO: Add check if players turn.
 
-        // TODO: Change packet to packet2 or defenderPacket.
         if (!isPlayersTurn(player)) {
             packet1 = packet.generatePacket(Protocol.MOVE, false, 0);
             packetBuffer.setFirst(packet1); packetBuffer.setSecond(null);
@@ -234,8 +221,7 @@ public class Game {
             packet2 = packet.generatePacket(Protocol.ENEMY_MOVE, Flag.NO_COMBAT, true, move);
         }
 
-        executor.submit(new SendMessage(attackerOut, packet1));
-        executor.submit(new SendMessage(defenderOut, packet2));
+        this.sendPackets();
 
         // Αν τελείωσε το παιχνίδι.
         // TODO: Maybe get it smoother. Change flags and protocols to include everything in one packet and view the battle.
@@ -251,8 +237,7 @@ public class Game {
             }
 
             gameOver = true;
-            executor.submit(new SendMessage(attackerOut, packet1));
-            executor.submit(new SendMessage(defenderOut, packet2));
+            this.sendPackets();
         }
 
         if (attacker.canRevive(winner, defender)) {
@@ -260,10 +245,7 @@ public class Game {
             reviver = winner;
             packet1 = packet.generatePacket(Protocol.REVIVE, Flag.REVIVE_PANEL, true, capturedMonsters);
             packet2 = packet.generatePacket(Protocol.ENEMY_REVIVE, Flag.WAIT, true, 0);
-
-            // TODO: Create function send messages instead of having executor.submits.
-            executor.submit(new SendMessage(attackerOut, packet1));
-            executor.submit(new SendMessage(defenderOut, packet2));
+            this.sendPackets();
         } else nextRound();
     }
 
@@ -275,21 +257,26 @@ public class Game {
         else if (attacker.isCaptured(monster)) {
             revive = true;
             reviveMonster = monster;
-            List<Integer> highlightPositions = attacker.getValidRevivalPositions();
+            ArrayList<Integer> highlightPositions = (ArrayList<Integer>) attacker.getValidRevivalPositions();
+            if (requiresInversion(attacker)) highlightPositions = invertPositions(highlightPositions);
             packet1 = packet.generatePacket(Protocol.REVIVE, Flag.REVIVE_MONSTER, true, highlightPositions);
             attackerOut.println(packet1);
         }
     }
 
     public void reviveMonster(String player, int[] position) {
-        if (!isPlayersTurn(player)) {
+        if (!isPlayersTurn(player))
             defenderOut.println(packet.generatePacket(Protocol.REVIVE, Flag.REVIVE_POSITION, false, 0));
-        } else if (attacker.reviveMonster(reviver, position[0], position[1], defender, reviveMonster)) {
-            int[] data = {position[0], position[1], reviveMonster};
+
+        int row = requiresInversion(attacker) ? invertRow(position[0]) : position[0];
+        int column = requiresInversion(attacker) ? invertColumn(position[1]) : position[1];
+
+
+        if (attacker.reviveMonster(reviver, row, column, defender, reviveMonster)) {
+            int[] data = {invertRow(position[0]), invertColumn(position[1]), reviveMonster};
             packet1 = packet.generatePacket(Protocol.REVIVE, Flag.REVIVE_POSITION, true, position);
             packet2 = packet.generatePacket(Protocol.ENEMY_REVIVE, Flag.REVIVED, true, data);
-            executor.submit(new SendMessage(attackerOut, packet1));
-            executor.submit(new SendMessage(defenderOut, packet2));
+            this.sendPackets();
             revive = false;
             this.nextRound();
         }
@@ -338,37 +325,18 @@ public class Game {
         // TODO: Flags are redundant, remove them.
         packet1 = getPlayersBoard(attacker.getPlayerID(), Flag.FIRST, Protocol.REPLAY);
         packet2 = getPlayersBoard(defender.getPlayerID(), Flag.SECOND, Protocol.REPLAY);
-
-        executor.submit(new SendMessage(attackerOut, packet1));
-        executor.submit(new SendMessage(defenderOut, packet2));
+        this.sendPackets();
 
         ready[0] = false;
         ready[1] = false;
     }
 
-    // Μετά την αναγέννηση, επανεμφανίζει το παιχνίδι, αλλάζει γύρο και καθιστά  false τη μεταβλητή revive.
-    private void resumeGame() {
-        this.nextRound();
-        this.revive = false;
-    }
 
     // TODO: Add string ID to Player and then remove comment.
-    public boolean isPlayersTurn(String player){
+    private boolean isPlayersTurn(String player){
         return attacker.getPlayerID().equals(player);
     }
 
-    public boolean isOver() {
-        return gameOver;
-    }
-
-    public int canRestart() {
-        return (player1.exited() || player2.exited()) ? -1 : (player1.restart() && player2.restart()) ? 1 : 0;
-    }
-
-    // If a player exited and the other player wants to continue, find him another game.
-    public Client findClientGame() {
-        return (player1.exited()) ? player2 : ((player2.exited()) ? player1 : null);
-    }
 
     public void isAvailableMonster(String player, int monster) {
         String response;
@@ -398,7 +366,6 @@ public class Game {
         if(highlightPositions == null || highlightPositions.size() == 0) return null;
         ArrayList<Integer> invertedPositions = new ArrayList<>(highlightPositions.size());
         for (int i = 0; i < highlightPositions.size(); i += 2) {
-            System.out.println("Inverting i="+i+": " + highlightPositions.get(i) + " " + highlightPositions.get(i + 1));
             invertedPositions.add(invertRow(highlightPositions.get(i)));
             invertedPositions.add(invertColumn(highlightPositions.get(i + 1)));
         }
@@ -419,8 +386,7 @@ public class Game {
             int[] data = {position[0], position[1], selectedMonster[i]};
             packet1 = packet.generatePacket(Protocol.BOARD_SETUP, Flag.POSITION_MONSTER, true, data);
             packet2 = packet.generatePacket(Protocol.ENEMY_BOARD_SETUP, Flag.POSITION_MONSTER, true, invertedPosition);
-            executor.submit(new SendMessage(currentPlayerOut, packet1));
-            executor.submit(new SendMessage(opponentOut, packet2));
+            this.sendPackets(currentPlayerOut, opponentOut);
         } else {
             packet1 = packet.generatePacket(Protocol.BOARD_SETUP, Flag.POSITION_MONSTER, false, 0);
             currentPlayerOut.println(packet1);
@@ -439,7 +405,7 @@ public class Game {
     }
 
     // TODO: Convert to void
-    public Client exit(String id) {
+    public void exit(String id) {
         PrintWriter opponentOut = (attacker.getPlayerID().equals(id)) ? defenderOut : attackerOut;
         packet1 = packet.generatePacket(Protocol.GAME_OVER, Flag.OPPONENT_EXITED, true, 0);
         opponentOut.println(packet1);
@@ -448,7 +414,7 @@ public class Game {
 
         exitingClient.exitGame();
 
-        return (otherClient.exited()) ? null : otherClient;
+        otherClient.exited();
     }
 
     public Client getClient(String id) {
@@ -469,8 +435,7 @@ public class Game {
             int[] data = {position[0], position[1], monster};
             packet1 = packet.generatePacket(Protocol.BOARD_SETUP, Flag.CLEAR_POSITION, true, data);
             packet2 = packet.generatePacket(Protocol.ENEMY_BOARD_SETUP, Flag.CLEAR_POSITION, true, invertedPosition);
-            executor.submit(new SendMessage(aOut, packet1));
-            executor.submit(new SendMessage(dOut, packet2));
+            this.sendPackets(aOut, dOut);
         }
         else {
             packet1 = packet.generatePacket(Protocol.BOARD_SETUP, Flag.CLEAR_POSITION, false, 0);
@@ -498,8 +463,7 @@ public class Game {
         }
         packet1 = packet.generatePacket(Protocol.BOARD_SETUP, Flag.RANDOMISE_BOARD, true, data);
         packet2 = packet.generatePacket(Protocol.ENEMY_BOARD_SETUP, Flag.RANDOMISE_BOARD, true, data2);
-        executor.submit(new SendMessage(aOut, packet1));
-        executor.submit(new SendMessage(dOut, packet2));
+        this.sendPackets(aOut, dOut);
     }
 
     private ArrayList<Integer> randomiseInversion(ArrayList<Integer> data) {
@@ -538,8 +502,7 @@ public class Game {
                 packet2 = packet.generatePacket(Protocol.BOARD_SETUP, Flag.OPPONENT_READY, true, Flag.SECOND);
             }
 
-            executor.submit(new SendMessage(attackerOut, packet1));
-            executor.submit(new SendMessage(defenderOut, packet2));
+            this.sendPackets();
         }
         else {
             packet1 = packet.generatePacket(Protocol.BOARD_SETUP, Flag.WAITING_OPPONENT, true, 0);
@@ -558,6 +521,20 @@ public class Game {
 
     private boolean requiresInversion(Player p) {
         return p == invertedPlayer;
+    }
+
+    private void sendPackets() {
+        SendMessage message1 = new SendMessage(attackerOut, packet1);
+        SendMessage message2 = new SendMessage(defenderOut, packet2);
+        executor.submit(message1);
+        executor.submit(message2);
+    }
+
+    private void sendPackets(PrintWriter currentPlayerOut, PrintWriter opponentOut) {
+        SendMessage message1 = new SendMessage(currentPlayerOut, packet1);
+        SendMessage message2 = new SendMessage(opponentOut, packet2);
+        executor.submit(message1);
+        executor.submit(message2);
     }
 
     static class SendMessage implements Runnable {

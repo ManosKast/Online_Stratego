@@ -1,4 +1,7 @@
 TODO:
+Add all options in starting UI
+
+Make all game-modes playable.
 
 Board elements should be accessed solely by Player class
 
